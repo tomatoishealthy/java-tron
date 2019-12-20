@@ -21,6 +21,9 @@ public class HttpTestMortgageMechanism01 {
   private final String witnessKey = Configuration.getByPath("testng.conf")
       .getString("witness.key1");
   private final byte[] witnessAddress = PublicMethed.getFinalAddress(witnessKey);
+  private final String witnessKey2 = Configuration.getByPath("testng.conf")
+      .getString("witness.key2");
+  private final byte[] witnessAddress2 = PublicMethed.getFinalAddress(witnessKey2);
   Long amount = 2048000000L;
   String description = Configuration.getByPath("testng.conf")
       .getString("defaultParameter.assetDescription");
@@ -42,15 +45,36 @@ public class HttpTestMortgageMechanism01 {
     responseContent = HttpMethed.parseResponseContent(response);
     HttpMethed.printJsonContent(responseContent);
     Assert.assertEquals("20", responseContent.getString("brokerage"));
+
+    response = HttpMethed.getBrokerageOnVisible(httpnode, witnessAddress2, "true");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertEquals("20", responseContent.getString("brokerage"));
+
+    response = HttpMethed.getBrokerageOnVisible(httpnode, fromAddress, "false");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertEquals("20", responseContent.getString("brokerage"));
   }
 
-  /**
-   * constructor.
-   */
   @Test(enabled = true, description = "GetBrokerage from solidity by http")
   public void test02GetBrokerageFromSolidity() {
     HttpMethed.waitToProduceOneBlockFromSolidity(httpnode, httpSoliditynode);
     response = HttpMethed.getBrokerageFromSolidity(httpSoliditynode, witnessAddress);
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertEquals("20", responseContent.getString("brokerage"));
+
+    HttpMethed.waitToProduceOneBlockFromSolidity(httpnode, httpSoliditynode);
+    response = HttpMethed
+        .getBrokerageFromSolidityOnVisible(httpSoliditynode, witnessAddress2, "true");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertEquals("20", responseContent.getString("brokerage"));
+
+    HttpMethed.waitToProduceOneBlockFromSolidity(httpnode, httpSoliditynode);
+    response = HttpMethed
+        .getBrokerageFromSolidityOnVisible(httpSoliditynode, fromAddress, "false");
     responseContent = HttpMethed.parseResponseContent(response);
     HttpMethed.printJsonContent(responseContent);
     Assert.assertEquals("20", responseContent.getString("brokerage"));
@@ -66,9 +90,31 @@ public class HttpTestMortgageMechanism01 {
     HttpMethed.waitToProduceOneBlock(httpnode);
 
     //update brokerage
-    response = HttpMethed.updateBrokerage(httpnode, witnessAddress, 30L, witnessKey);
+    response = HttpMethed.updateBrokerage(httpnode, witnessAddress, 11L, witnessKey);
     Assert.assertTrue(HttpMethed.verificationResult(response));
     HttpMethed.waitToProduceOneBlock(httpnode);
+
+    response = HttpMethed.sendCoin(httpnode, fromAddress, witnessAddress2, amount, testKey002);
+    Assert.assertTrue(HttpMethed.verificationResult(response));
+    HttpMethed.waitToProduceOneBlock(httpnode);
+
+//    //update brokerage onvisible
+//    response = HttpMethed
+//        .updateBrokerageOnVisible(httpnode, witnessAddress2, 24L, witnessKey2, "true");
+//    Assert.assertTrue(HttpMethed.verificationResult(response));
+//    HttpMethed.waitToProduceOneBlock(httpnode);
+//
+//    //update brokerage onvisible
+//    response = HttpMethed
+//        .updateBrokerageOnVisible(httpnode, witnessAddress, 88L, witnessKey, "false");
+//    Assert.assertTrue(HttpMethed.verificationResult(response));
+//    HttpMethed.waitToProduceOneBlock(httpnode);
+//
+//    //update brokerage onvisible
+//    response = HttpMethed
+//        .updateBrokerageOnVisible(httpnode, fromAddress, 78L, testKey002, "true");
+////    Assert.assertTrue(HttpMethed.verificationResult(response));
+//    HttpMethed.waitToProduceOneBlock(httpnode);
   }
 
   /**
@@ -79,9 +125,19 @@ public class HttpTestMortgageMechanism01 {
     response = HttpMethed.getReward(httpnode, witnessAddress);
     responseContent = HttpMethed.parseResponseContent(response);
     HttpMethed.printJsonContent(responseContent);
-    Assert.assertTrue((
-        new BigInteger(responseContent.getString("reward")).compareTo(new BigInteger("0")) == 0)
-        || (new BigInteger(responseContent.getString("reward"))
+    Assert.assertTrue((new BigInteger(responseContent.getString("reward"))
+        .compareTo(new BigInteger("0"))) == 1);
+
+    response = HttpMethed.getRewardOnVisible(httpnode, witnessAddress2, "true");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertTrue((new BigInteger(responseContent.getString("reward"))
+        .compareTo(new BigInteger("0"))) == 1);
+
+    response = HttpMethed.getRewardOnVisible(httpnode, witnessAddress, "false");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertTrue((new BigInteger(responseContent.getString("reward"))
         .compareTo(new BigInteger("0"))) == 1);
   }
 
@@ -93,9 +149,19 @@ public class HttpTestMortgageMechanism01 {
     response = HttpMethed.getRewardFromSolidity(httpSoliditynode, witnessAddress);
     responseContent = HttpMethed.parseResponseContent(response);
     HttpMethed.printJsonContent(responseContent);
-    Assert.assertTrue((
-        new BigInteger(responseContent.getString("reward")).compareTo(new BigInteger("0")) == 0)
-        || (new BigInteger(responseContent.getString("reward"))
+    Assert.assertTrue((new BigInteger(responseContent.getString("reward"))
+        .compareTo(new BigInteger("0"))) == 1);
+
+    response = HttpMethed.getRewardFromSolidityOnVisible(httpSoliditynode, witnessAddress, "true");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertTrue((new BigInteger(responseContent.getString("reward"))
+        .compareTo(new BigInteger("0"))) == 1);
+
+    response = HttpMethed.getRewardFromSolidityOnVisible(httpSoliditynode, witnessAddress, "false");
+    responseContent = HttpMethed.parseResponseContent(response);
+    HttpMethed.printJsonContent(responseContent);
+    Assert.assertTrue((new BigInteger(responseContent.getString("reward"))
         .compareTo(new BigInteger("0"))) == 1);
   }
 

@@ -12,7 +12,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
-import org.tron.api.GrpcAPI;
 import org.tron.api.GrpcAPI.AccountResourceMessage;
 import org.tron.api.WalletGrpc;
 import org.tron.common.crypto.ECKey;
@@ -27,7 +26,7 @@ import stest.tron.wallet.common.client.Parameter.CommonConstant;
 import stest.tron.wallet.common.client.utils.PublicMethed;
 
 @Slf4j
-public class typeNameTest {
+public class CalldataTest {
 
   private final String testKey002 = Configuration.getByPath("testng.conf")
       .getString("foundationAccount.key2");
@@ -87,8 +86,8 @@ public class typeNameTest {
     logger.info("beforeNetUsed:" + beforeNetUsed);
     logger.info("beforeFreeNetUsed:" + beforeFreeNetUsed);
 
-    String filePath = "./src/test/resources/soliditycode/typeName.sol";
-    String contractName = "TypeName";
+    String filePath = "./src/test/resources/soliditycode/calldata.sol";
+    String contractName = "C";
     HashMap retMap = PublicMethed.getBycodeAbi(filePath, contractName);
     String code = retMap.get("byteCode").toString();
     String abi = retMap.get("abI").toString();
@@ -100,7 +99,7 @@ public class typeNameTest {
             dev001Address, blockingStubFull);
     PublicMethed.waitProduceNextBlock(blockingStubFull);
 
-    Optional<Protocol.TransactionInfo> infoById = null;
+    Optional<TransactionInfo> infoById = null;
     PublicMethed.waitProduceNextBlock(blockingStubFull);
     infoById = PublicMethed.getTransactionInfoById(txid, blockingStubFull);
     if (infoById.get().getResultValue() != 0) {
@@ -128,7 +127,7 @@ public class typeNameTest {
     logger.info("energyUsageTotal:" + energyUsageTotal);
 
     Protocol.Account infoafter = PublicMethed.queryAccount(dev001Key, blockingStubFull);
-    GrpcAPI.AccountResourceMessage resourceInfoafter = PublicMethed
+    AccountResourceMessage resourceInfoafter = PublicMethed
         .getAccountResource(dev001Address,
             blockingStubFull);
     Long afterBalance = infoafter.getBalance();
@@ -146,24 +145,6 @@ public class typeNameTest {
     Assert.assertTrue(beforeNetUsed + netUsed >= afterNetUsed);
   }
 
-
-  @Test(enabled = true, description = "Trigger testTypeName function")
-  public void test02TriggerTestTypeNameFunction() {
-    final String txid = PublicMethed.triggerContract(contractAddress,
-        "testTypeName()", "#", false,
-        0, maxFeeLimit, dev001Address, dev001Key, blockingStubFull);
-    PublicMethed.waitProduceNextBlock(blockingStubFull);
-    Optional<Protocol.TransactionInfo> infoById = PublicMethed
-        .getTransactionInfoById(txid, blockingStubFull);
-    Assert.assertTrue(infoById.get().getResultValue() == 0);
-    logger.info("infoById:" + infoById.get());
-    Assert.assertTrue(infoById.get().getContractResult(0).toStringUtf8()
-        .contains("TypeName"));
-  }
-
-  /**
-   * constructor.
-   */
   @AfterClass
   public void shutdown() throws InterruptedException {
     long balance = PublicMethed.queryAccount(dev001Key, blockingStubFull).getBalance();
