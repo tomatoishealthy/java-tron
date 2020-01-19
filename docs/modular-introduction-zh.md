@@ -13,7 +13,7 @@ java-tron 模块化的目的是为了帮助开发者方便地构建出特定应�
 ## 模块化的 java-tron 架构介绍
 
 <h1 align="center">
-  <img width=60% height="60%" src="https://github.com/tronprotocol/java-tron/tree/develop/docs/images/module.png">
+  <img width=60% height="60%" src="https://github.com/guoquanwu/java-tron/blob/custom_actuator_doc_image/docs/images/module.png">
 </h1>
 
 模块化后的 java-tron 目前分为6个模块：framework、protocol、common、chainbase、consensus、actuator，下面分别简单介绍一下各个模块的作用。
