@@ -205,7 +205,7 @@ do
     fi
 done
 
-if [[ jvm_index > 0 ]]; then
+if [[ \$jvm_index > 0 ]]; then
     unset array[jvm_index]
     unset array[jvm_index+1]
 fi
