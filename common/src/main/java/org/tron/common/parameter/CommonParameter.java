@@ -64,7 +64,7 @@ public class CommonParameter {
   @Parameter(names = {"--max-connect-number"})
   public int maxHttpConnectNumber = 50;
   @Getter
-  @Parameter(description = "--seed-nodes")
+  @Parameter(names = {"--seed-nodes"}, description = "--seed-nodes")
   public List<String> seedNodes = new ArrayList<>();
   @Parameter(names = {"-p", "--private-key"}, description = "private-key")
   public String privateKey = "";
