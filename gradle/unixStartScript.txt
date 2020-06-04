@@ -192,7 +192,7 @@ jvm_index=-1
 for ((i=0;i<\${#array[@]};i++))
 do
     if [[ "-jvm" == \${array[\$i]} ]]; then
-        if [[ \${array[\$i+1]} =~ ^{.*}\$ ]]; then
+        if [[ \${array[\$i+1]} =~ ^\\{.*\\}\$ ]]; then
             jvm_args=\${array[\$i+1]}
             len=\${#jvm_args}
             jvm_args=\${jvm_args:1:\$len-2}

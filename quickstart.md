@@ -54,7 +54,11 @@ This image also supports custom some other startup parameters，here is an examp
 docker run -it -d -p 8080:8080 -p 8090:8090 -p 18888:18888 -p 50051:50051 \
            -v /Users/quan/tron/docker:/java-tron/conf 
            -v /Users/quan/tron/docker/datadir:/java-tron/data 
-           tronprotocol/java-tron:4.0 -jvm "{-Xmx10g -Xms10g}" -c /java-tron/conf/config-localtest.conf -d /java-tron/data -w 
+           tronprotocol/java-tron:4.0 
+           -jvm "{-Xmx10g -Xms10g}" 
+           -c /java-tron/conf/config-localtest.conf 
+           -d /java-tron/data 
+           -w 
 ```
 Note: The jvm parameters should be enclosed in double quotes and braces.
 
