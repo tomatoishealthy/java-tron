@@ -19,8 +19,10 @@ RUN set -o errexit -o nounset \
     && echo "git clone" \
     && mkdir -p $TMP_DIR \
     && cd $TMP_DIR \
-    && git clone https://github.com/tronprotocol/java-tron.git \
+#    && git clone https://github.com/tronprotocol/java-tron.git \
+    && git clone https://github.com/guoquanwu/java-tron.git \
     && cd java-tron \
+    && git checkout docker \
     && ./gradlew build -x test \
     && cd build/distributions \
     && unzip -o java-tron-1.0.0.zip \
