@@ -32,11 +32,11 @@ RUN set -o errexit -o nounset \
     && mv $JAVA_HOME/jre /usr/local \
     && rm -rf $JAVA_HOME
 
-#ENV JAVA_HOME="/usr/local/jre"
-#ENV PATH=$PATH:$JAVA_HOME/bin
-#
-#COPY docker-entrypoint.sh $BASE_DIR/bin
-#
-#WORKDIR $BASE_DIR
-#
-#ENTRYPOINT ["./bin/docker-entrypoint.sh"]
+ENV JAVA_HOME="/usr/local/jre"
+ENV PATH=$PATH:$JAVA_HOME/bin
+
+COPY docker-entrypoint.sh $BASE_DIR/bin
+
+WORKDIR $BASE_DIR
+
+ENTRYPOINT ["./bin/docker-entrypoint.sh"]
