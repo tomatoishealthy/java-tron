@@ -20,7 +20,7 @@ RUN set -o errexit -o nounset \
     && mkdir -p $TMP_DIR \
     && cd $TMP_DIR \
 #    && git clone https://github.com/tronprotocol/java-tron.git \
-    && git clone https://github.com/guoquanwu/java-tron.git \
+    && git clone -b docker https://github.com/guoquanwu/java-tron.git \
     && cd java-tron \
     && git checkout docker \
     && ./gradlew build -x test \
@@ -32,11 +32,11 @@ RUN set -o errexit -o nounset \
     && mv $JAVA_HOME/jre /usr/local \
     && rm -rf $JAVA_HOME
 
-ENV JAVA_HOME="/usr/local/jre"
-ENV PATH=$PATH:$JAVA_HOME/bin
-
-COPY docker-entrypoint.sh $BASE_DIR/bin
-
-WORKDIR $BASE_DIR
-
-ENTRYPOINT ["./bin/docker-entrypoint.sh"]
+#ENV JAVA_HOME="/usr/local/jre"
+#ENV PATH=$PATH:$JAVA_HOME/bin
+#
+#COPY docker-entrypoint.sh $BASE_DIR/bin
+#
+#WORKDIR $BASE_DIR
+#
+#ENTRYPOINT ["./bin/docker-entrypoint.sh"]
