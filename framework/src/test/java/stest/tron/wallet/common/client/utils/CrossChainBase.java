@@ -90,6 +90,7 @@ public class CrossChainBase {
   public static byte[] registerAccountAddress = PublicMethed.getFinalAddress(registerAccountKey);
 
   public static ECKey ecKey1 = new ECKey(Utils.getRandom());
+  //public static ECKey ecKey1 = ECKey.fromPrivate(ByteArray.fromHexString("4df12b6b37734c521eadc4ce5811f27f40e8bae8d43d32804dbf580d40aebcd7"));
   public static String trc10TokenAccountKey = ByteArray.toHexString(ecKey1.getPrivKeyBytes());
   public static final byte[] trc10TokenAccountAddress
       = PublicMethed.getFinalAddress(trc10TokenAccountKey);
