@@ -80,9 +80,9 @@ public class AutoInitial {
     String stakeManagerKeccak = "56e86af72b94d3aa725a2e35243d6acbf3dc1ada7212033defd5140c5fcb6a9d";
     String validatorShareKeccak = "f32233bced9bbd82f0754425f51b5ffaf897dacec3c8ac3384a66e38ea701ec8";
     String eventsHubKeccak = "a1ed0e7a71ca197f0dfc1206d3fcb9c6b88b70f1c3a11268f9b6ed75e8cabd08";
-    String stakeManagerAddr = getAddr(AutoDeploy.Contract.StakeManager.getName());
+    String stakeManagerAddr = getAddr(AutoDeploy.Contract.StakeManagerProxy.getName());
     String validatorShareAddr = getAddr(AutoDeploy.Contract.ValidatorShare.getName());
-    String eventsHubAddr = getAddr(AutoDeploy.Contract.EventsHub.getName());
+    String eventsHubAddr = getAddr(AutoDeploy.Contract.EventsHubProxy.getName());
 
     String updateMap = "updateContractMap(bytes32,address)";
     String updateStakeManager = AbiUtil.parseMethod(updateMap, Arrays.asList(stakeManagerKeccak, stakeManagerAddr));
