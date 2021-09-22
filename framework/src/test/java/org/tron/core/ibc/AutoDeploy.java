@@ -35,7 +35,7 @@ public class AutoDeploy {
   // node conf
   private String fullnode = "47.252.19.181:50051";
   // account
-  private String account1PriKey = "4df12b6b37734c521eadc4ce5811f27f40e8bae8d43d32804dbf580d40aebcd7";   // nile
+  private String account1PriKey = "";   // nile
 
   // server
   private WalletGrpc.WalletBlockingStub blockingStubFull = null;
@@ -55,6 +55,37 @@ public class AutoDeploy {
     blockingStubFull = WalletGrpc.newBlockingStub(fromChannelFull);
 
     PublicMethed.printAddress(account1PriKey);
+  }
+
+  @Test
+  public void deploy() throws IOException {
+    deployMerkle();
+    deployECVerify();
+    deployGovernance();
+    deployGovernanceProxy();
+    deployRegistry();
+    deployRootChain();
+    deployRootChainProxy();
+    deployStakeManager();
+    deployStakeManagerProxy();
+    deployStakingInfo();
+    deployStakingNFT();
+    deployStateSender();
+    deployValidatorShare();
+    deployValidatorShareFactory();
+    deployStakeManagerExtension();
+    deployEventsHub();
+    deployEventsHubProxy();
+    deployTronRootChainManager();
+    deployRootChainManagerProxy();
+    deployERC20Predicate();
+    deployERC20PredicateProxy();
+    deployEtherPredicate();
+    deployEtherPredicateProxy();
+    deployMintableERC20Predicate();
+    deployMintableERC20PredicateProxy();
+    deployDummyERC20();
+    deployDummyMintableERC20();
   }
 
   @Test

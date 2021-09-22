@@ -33,7 +33,7 @@ public class AutoInitial {
   // node conf
   private String fullnode = "47.252.19.181:50051";
   // account
-  private String account1PriKey = "4df12b6b37734c521eadc4ce5811f27f40e8bae8d43d32804dbf580d40aebcd7";   // nile
+  private String account1PriKey = "";   // nile
 
   // server
   private WalletGrpc.WalletBlockingStub blockingStubFull = null;
