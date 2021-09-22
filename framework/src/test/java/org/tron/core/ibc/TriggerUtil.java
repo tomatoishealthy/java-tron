@@ -24,7 +24,7 @@ public class TriggerUtil {
   private String contractAddress = "TMQ3Nfmmn7uFMDnjmT98sAPfdtaPsjFFDD";  // addr: validatorShare
   //private String contractAddress = "TCPgDUVZoamSbY9YXJ3dnAyfNC1M6Mqrzt";
 
-  private String account1PriKey = "";
+  private String account1PriKey = "4df12b6b37734c521eadc4ce5811f27f40e8bae8d43d32804dbf580d40aebcd7";
   private ECKey ecKey1 = ECKey.fromPrivate(ByteArray.fromHexString(account1PriKey));
   private byte[] account1Address = ecKey1.getAddress();
 
