@@ -307,6 +307,31 @@ public class AutoDeploy {
     System.out.println("MintableERC20PredicateProxy: " + MintableERC20PredicateProxyAddr);
   }
 
+  @Test
+  public void deployDummyERC20() throws IOException {
+    String tokenName = "DummyERC20";
+    String tokenSymbol = "DummyERC20";
+    Contract.DummyERC20.setAbi(DeployBase.getAbi(Contract.DummyERC20));
+    Contract.DummyERC20.setCode(DeployBase.getCode(Contract.DummyERC20));
+    Contract.DummyERC20.setMethod("constructor(string,string)");
+    Contract.DummyERC20.setParam("\"" + tokenName + "\"," + "\"" + tokenSymbol + "\"");
+    String DummyERC20Addr = DeployBase.deploy(Contract.DummyERC20, blockingStubFull, account1PriKey);
+    writeAddr(Contract.DummyERC20.getName(), DummyERC20Addr);
+    System.out.println("DummyERC20: " + DummyERC20Addr);
+  }
+
+  @Test
+  public void deployDummyMintableERC20() throws IOException {
+    String tokenName = "DummyMintable";
+    String tokenSymbol = "DummyMintable";
+    Contract.DummyMintableERC20.setAbi(DeployBase.getAbi(Contract.DummyMintableERC20));
+    Contract.DummyMintableERC20.setCode(DeployBase.getCode(Contract.DummyMintableERC20));
+    Contract.DummyMintableERC20.setMethod("constructor(string,string)");
+    Contract.DummyMintableERC20.setParam("\"" + tokenName + "\"," + "\"" + tokenSymbol + "\"");
+    String DummyMintableERC20Addr = DeployBase.deploy(Contract.DummyMintableERC20, blockingStubFull, account1PriKey);
+    writeAddr(Contract.DummyMintableERC20.getName(), DummyMintableERC20Addr);
+    System.out.println("DummyMintableERC20: " + DummyMintableERC20Addr);
+  }
 
 
   @Test
@@ -399,7 +424,11 @@ public class AutoDeploy {
 
     MintableERC20Predicate("MintableERC20Predicate", "", "", posPortalPath),
     // 参数为 MintableERC20Predicate 地址
-    MintableERC20PredicateProxy("MintableERC20PredicateProxy", "constructor(address)", "\"TPYpcP1o6Pa57GvKhGqrSd2kQV4bG2q4hQ\"", posPortalPath);
+    MintableERC20PredicateProxy("MintableERC20PredicateProxy", "constructor(address)", "\"TPYpcP1o6Pa57GvKhGqrSd2kQV4bG2q4hQ\"", posPortalPath),
+
+    // token
+    DummyERC20("DummyERC20", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath),
+    DummyMintableERC20("DummyMintableERC20", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath);
 
 
     private String name;
