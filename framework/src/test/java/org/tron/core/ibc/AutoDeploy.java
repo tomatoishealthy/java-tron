@@ -66,7 +66,7 @@ public class AutoDeploy {
     deployRegistry();
     deployRootChain();
     deployRootChainProxy();
-    deployStakeManager();
+   // deployStakeManager();
     deployStakeManagerProxy();
     deployStakingInfo();
     deployStakingNFT();
@@ -165,6 +165,7 @@ public class AutoDeploy {
     String StakeManagerAddr = DeployBase.deploy(Contract.StakeManager, blockingStubFull, account1PriKey);
     writeAddr(Contract.StakeManager.getName(), StakeManagerAddr);
     System.out.println("StakeManagerAddr: " + StakeManagerAddr);
+    System.out.println("code: " + Contract.StakeManager.getCode());
   }
 
   @Test
