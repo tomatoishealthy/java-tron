@@ -161,6 +161,14 @@ public class AutoInitial {
             getAddress(account1PriKey), account1PriKey, blockingStubFull);
     System.out.println("--- setCheckpointManager in RootChainManagerProxy finished ---");
 
+    // set stateSender
+    methodStr = "setStateSender(address)";
+    argsStr =  AbiUtil.parseParameters(methodStr, Arrays.asList(getAddr(AutoDeploy.Contract.StateSender.getName())));
+    PublicMethed.triggerContract(Commons.decodeFromBase58Check(getAddr(AutoDeploy.Contract.RootChainManagerProxy.getName())), methodStr, argsStr,
+            true, 0, 200000000L, "0", 0,
+            getAddress(account1PriKey), account1PriKey, blockingStubFull);
+    System.out.println("--- stateSender in RootChainManagerProxy finished ---");
+
     System.out.println("initialize finished, please go ahead to the txes of the admin to check whether the txes are successfully");
   }
 
