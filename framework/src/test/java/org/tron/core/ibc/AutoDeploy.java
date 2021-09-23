@@ -260,6 +260,19 @@ public class AutoDeploy {
   }
 
   @Test
+  public void deployBtt() throws IOException {
+    String tokenName = "BTT";
+    String tokenSymbol = "BTT";
+    Contract.Btt.setAbi(DeployBase.getAbi(Contract.Btt));
+    Contract.Btt.setCode(DeployBase.getCode(Contract.Btt));
+    Contract.Btt.setMethod("constructor(string,string)");
+    Contract.Btt.setParam("\"" + tokenName + "\"," + "\"" + tokenSymbol + "\"");
+    String BttAddr = DeployBase.deploy(Contract.Btt, blockingStubFull, account1PriKey);
+    writeAddr(Contract.Btt.getName(), BttAddr);
+    System.out.println("Btt: " + BttAddr);
+  }
+
+  @Test
   public void deployTronRootChainManager() throws IOException {
     Contract.TronRootChainManager.setAbi(DeployBase.getAbi(Contract.TronRootChainManager));
     Contract.TronRootChainManager.setCode(DeployBase.getCode(Contract.TronRootChainManager));
@@ -438,6 +451,7 @@ public class AutoDeploy {
     StakeManagerExtension("StakeManagerExtension", "", "", contractPath),
     EventsHub("EventsHub", "", "", contractPath),
     EventsHubProxy("EventsHubProxy", "", "", contractPath),
+    Btt("TestToken", "constructor(string,string)", "", contractPath),
 
 
     //   posPortalPath  //

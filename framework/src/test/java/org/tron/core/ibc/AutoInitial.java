@@ -34,6 +34,7 @@ public class AutoInitial {
   private String fullnode = "47.252.19.181:50051";
   // account
   private String account1PriKey = "";   // nile
+//  private String account1PriKey = "";   // test group
 
   // server
   private WalletGrpc.WalletBlockingStub blockingStubFull = null;
@@ -168,6 +169,33 @@ public class AutoInitial {
             true, 0, 200000000L, "0", 0,
             getAddress(account1PriKey), account1PriKey, blockingStubFull);
     System.out.println("--- stateSender in RootChainManagerProxy finished ---");
+
+    // register ether
+    String EtherTokenType = "0xa234e09165f88967a714e2a476288e4c6d88b4b69fe7c300a03190b858990bfc";
+    methodStr = "registerPredicate(bytes32,address)";
+    argsStr =  AbiUtil.parseParameters(methodStr, Arrays.asList(EtherTokenType, getAddr(AutoDeploy.Contract.EtherPredicateProxy.getName())));
+    PublicMethed.triggerContract(Commons.decodeFromBase58Check(getAddr(AutoDeploy.Contract.RootChainManagerProxy.getName())), methodStr, argsStr,
+            true, 0, 200000000L, "0", 0,
+            getAddress(account1PriKey), account1PriKey, blockingStubFull);
+    System.out.println("--- register etherPredicate in RootChainManagerProxy finished ---");
+
+    // register erc20
+    String ERC20TokenType = "0x8ae85d849167ff996c04040c44924fd364217285e4cad818292c7ac37c0a345b";
+    methodStr = "registerPredicate(bytes32,address)";
+    argsStr =  AbiUtil.parseParameters(methodStr, Arrays.asList(ERC20TokenType, getAddr(AutoDeploy.Contract.ERC20PredicateProxy.getName())));
+    PublicMethed.triggerContract(Commons.decodeFromBase58Check(getAddr(AutoDeploy.Contract.RootChainManagerProxy.getName())), methodStr, argsStr,
+            true, 0, 200000000L, "0", 0,
+            getAddress(account1PriKey), account1PriKey, blockingStubFull);
+    System.out.println("--- register etherPredicate in RootChainManagerProxy finished ---");
+
+    // register mintable erc20
+    String MintableERC20TokenType = "0x5ffef61af1560b9aefc0e42aaa0f9464854ab113ab7b8bfab271be94cdb1d053";
+    methodStr = "registerPredicate(bytes32,address)";
+    argsStr =  AbiUtil.parseParameters(methodStr, Arrays.asList(MintableERC20TokenType, getAddr(AutoDeploy.Contract.MintableERC20PredicateProxy.getName())));
+    PublicMethed.triggerContract(Commons.decodeFromBase58Check(getAddr(AutoDeploy.Contract.RootChainManagerProxy.getName())), methodStr, argsStr,
+            true, 0, 200000000L, "0", 0,
+            getAddress(account1PriKey), account1PriKey, blockingStubFull);
+    System.out.println("--- register etherPredicate in RootChainManagerProxy finished ---");
 
     System.out.println("initialize finished, please go ahead to the txes of the admin to check whether the txes are successfully");
   }
