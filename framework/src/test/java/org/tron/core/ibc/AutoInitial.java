@@ -27,16 +27,12 @@ import java.util.Arrays;
 
 public class AutoInitial {
 
-  private static String contractPath = "/Users/quan/tron/contracts/build/contracts";
-  private static String posPortalPath = "/Users/quan/tron/pos-portal/build/contracts";
-  private String contractAddress = "src/test/java/org/tron/core/ibc/contractAddresses.json";
-  // node conf
-  private String fullnode = "47.252.19.181:50051";
-  // account
-  private String account1PriKey = "4df12b6b37734c521eadc4ce5811f27f40e8bae8d43d32804dbf580d40aebcd7";   // nile
-//  private String account1PriKey = "b47e686119f2236f38cd0e8a4fe20f8a7fc5cb4284d36131f447c63857e3dac9";   // test group
+  private static String contractPath = Config.contractPath;
+  private static String posPortalPath = Config.posPortalPath;
+  private String fullNode = Config.fullNode;
+  private String account1PriKey = Config.accountPriKey;
+  private String contractAddress = Config.contractAddress;
 
-  // server
   private WalletGrpc.WalletBlockingStub blockingStubFull = null;
 
   private byte[] getAddress(String priKey) {
@@ -50,7 +46,7 @@ public class AutoInitial {
   public void beforeClass() {
     Wallet wallet = new Wallet();
     Wallet.setAddressPreFixByte(Parameter.CommonConstant.ADD_PRE_FIX_BYTE_MAINNET);
-    ManagedChannel fromChannelFull = ManagedChannelBuilder.forTarget(fullnode).usePlaintext(true).build();
+    ManagedChannel fromChannelFull = ManagedChannelBuilder.forTarget(fullNode).usePlaintext(true).build();
     blockingStubFull = WalletGrpc.newBlockingStub(fromChannelFull);
 
     PublicMethed.printAddress(account1PriKey);

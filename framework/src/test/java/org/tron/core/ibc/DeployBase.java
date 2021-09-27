@@ -16,7 +16,7 @@ import java.util.Map;
 public class DeployBase {
 
 
-    private static String abiPath = "/Users/quan/tron/java-tron/framework/src/test/java/org/tron/core/ibc/abi/";
+    private static String abiPath = "src/test/java/org/tron/core/ibc/abi/";
 
     public static String deploy(AutoDeploy.Contract contract,
                                 WalletGrpc.WalletBlockingStub blockingStubFull,
