@@ -81,8 +81,14 @@ public class AutoDeploy {
     deployEtherPredicateProxy();
     deployMintableERC20Predicate();
     deployMintableERC20PredicateProxy();
+    deployERC721Predicate();
+    deployERC721PredicateProxy();
+    deployMintableERC721Predicate();
+    deployMintableERC721PredicateProxy();
     deployDummyERC20();
     deployDummyMintableERC20();
+    deployDummyERC721();
+    deployDummyMintableERC721();
   }
 
   @Test
@@ -350,6 +356,46 @@ public class AutoDeploy {
   }
 
   @Test
+  public void deployERC721Predicate() throws IOException {
+    Contract.ERC721Predicate.setAbi(DeployBase.getAbi(Contract.ERC721Predicate));
+    Contract.ERC721Predicate.setCode(DeployBase.getCode(Contract.ERC721Predicate));
+    String ERC721PredicateAddr = DeployBase.deploy(Contract.ERC721Predicate, blockingStubFull, account1PriKey);
+    writeAddr(Contract.ERC721Predicate.getName(), ERC721PredicateAddr);
+    System.out.println("ERC721Predicate: " + ERC721PredicateAddr);
+  }
+
+  @Test
+  public void deployERC721PredicateProxy() throws IOException {
+    Contract.ERC721PredicateProxy.setAbi(DeployBase.getAbi(Contract.ERC721PredicateProxy));
+    Contract.ERC721PredicateProxy.setCode(DeployBase.getCode(Contract.ERC721PredicateProxy));
+    Contract.ERC721PredicateProxy.setMethod("constructor(address)");
+    Contract.ERC721PredicateProxy.setParam("\"" + getAddr(Contract.ERC721Predicate.getName()) + "\"");
+    String ERC721PredicateProxyAddr = DeployBase.deploy(Contract.ERC721PredicateProxy, blockingStubFull, account1PriKey);
+    writeAddr(Contract.ERC721PredicateProxy.getName(), ERC721PredicateProxyAddr);
+    System.out.println("ERC721PredicateProxyAddr: " + ERC721PredicateProxyAddr);
+  }
+
+  @Test
+  public void deployMintableERC721Predicate() throws IOException {
+    Contract.MintableERC721Predicate.setAbi(DeployBase.getAbi(Contract.MintableERC721Predicate));
+    Contract.MintableERC721Predicate.setCode(DeployBase.getCode(Contract.MintableERC721Predicate));
+    String MintableERC721PredicateAddr = DeployBase.deploy(Contract.MintableERC721Predicate, blockingStubFull, account1PriKey);
+    writeAddr(Contract.MintableERC721Predicate.getName(), MintableERC721PredicateAddr);
+    System.out.println("MintableERC721Predicate: " + MintableERC721PredicateAddr);
+  }
+
+  @Test
+  public void deployMintableERC721PredicateProxy() throws IOException {
+    Contract.MintableERC721PredicateProxy.setAbi(DeployBase.getAbi(Contract.MintableERC721PredicateProxy));
+    Contract.MintableERC721PredicateProxy.setCode(DeployBase.getCode(Contract.MintableERC721PredicateProxy));
+    Contract.MintableERC721PredicateProxy.setMethod("constructor(address)");
+    Contract.MintableERC721PredicateProxy.setParam("\"" + getAddr(Contract.MintableERC721Predicate.getName()) + "\"");
+    String MintableERC721PredicateProxyAddr = DeployBase.deploy(Contract.MintableERC721PredicateProxy, blockingStubFull, account1PriKey);
+    writeAddr(Contract.MintableERC721PredicateProxy.getName(), MintableERC721PredicateProxyAddr);
+    System.out.println("MintableERC721PredicateProxyAddr: " + MintableERC721PredicateProxyAddr);
+  }
+
+  @Test
   public void deployDummyERC20() throws IOException {
     String tokenName = "DummyERC20";
     String tokenSymbol = "DummyERC20";
@@ -373,6 +419,32 @@ public class AutoDeploy {
     String DummyMintableERC20Addr = DeployBase.deploy(Contract.DummyMintableERC20, blockingStubFull, account1PriKey);
     writeAddr(Contract.DummyMintableERC20.getName(), DummyMintableERC20Addr);
     System.out.println("DummyMintableERC20: " + DummyMintableERC20Addr);
+  }
+
+  @Test
+  public void deployDummyERC721() throws IOException {
+    String tokenName = "DummyERC721";
+    String tokenSymbol = "DummyERC721";
+    Contract.DummyERC721.setAbi(DeployBase.getAbi(Contract.DummyERC721));
+    Contract.DummyERC721.setCode(DeployBase.getCode(Contract.DummyERC721));
+    Contract.DummyERC721.setMethod("constructor(string,string)");
+    Contract.DummyERC721.setParam("\"" + tokenName + "\"," + "\"" + tokenSymbol + "\"");
+    String DummyERC721Addr = DeployBase.deploy(Contract.DummyERC721, blockingStubFull, account1PriKey);
+    writeAddr(Contract.DummyERC721.getName(), DummyERC721Addr);
+    System.out.println("DummyERC721Addr: " + DummyERC721Addr);
+  }
+
+  @Test
+  public void deployDummyMintableERC721() throws IOException {
+    String tokenName = "DummyMintable721";
+    String tokenSymbol = "DummyMintable721";
+    Contract.DummyMintableERC721.setAbi(DeployBase.getAbi(Contract.DummyMintableERC721));
+    Contract.DummyMintableERC721.setCode(DeployBase.getCode(Contract.DummyMintableERC721));
+    Contract.DummyMintableERC721.setMethod("constructor(string,string)");
+    Contract.DummyMintableERC721.setParam("\"" + tokenName + "\"," + "\"" + tokenSymbol + "\"");
+    String DummyMintableERC721Addr = DeployBase.deploy(Contract.DummyMintableERC721, blockingStubFull, account1PriKey);
+    writeAddr(Contract.DummyMintableERC721.getName(), DummyMintableERC721Addr);
+    System.out.println("DummyMintableERC721Addr: " + DummyMintableERC721Addr);
   }
 
 
@@ -469,9 +541,21 @@ public class AutoDeploy {
     // 参数为 MintableERC20Predicate 地址
     MintableERC20PredicateProxy("MintableERC20PredicateProxy", "constructor(address)", "\"TPYpcP1o6Pa57GvKhGqrSd2kQV4bG2q4hQ\"", posPortalPath),
 
+    ERC721Predicate("ERC721Predicate", "", "", posPortalPath),
+    // 参数为 MintableERC20Predicate 地址
+    ERC721PredicateProxy("ERC721PredicateProxy", "constructor(address)", "\"TPYpcP1o6Pa57GvKhGqrSd2kQV4bG2q4hQ\"", posPortalPath),
+
+    MintableERC721Predicate("MintableERC721Predicate", "", "", posPortalPath),
+    // 参数为 MintableERC20Predicate 地址
+    MintableERC721PredicateProxy("MintableERC721PredicateProxy", "constructor(address)", "\"TPYpcP1o6Pa57GvKhGqrSd2kQV4bG2q4hQ\"", posPortalPath),
+
+
     // token
     DummyERC20("DummyERC20", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath),
-    DummyMintableERC20("DummyMintableERC20", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath);
+    DummyMintableERC20("DummyMintableERC20", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath),
+
+    DummyERC721("DummyERC721", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath),
+    DummyMintableERC721("DummyMintableERC721", "constructor(string,string)", "\"" + "test" + "\"," + "\"" + "test" + "\"", posPortalPath);
 
 
     private String name;
