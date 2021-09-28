@@ -29,15 +29,12 @@ import stest.tron.wallet.common.client.utils.PublicMethed;
 
 public class AutoDeploy {
 
-  private static String contractPath = "/Users/quan/tron/contracts/build/contracts";
-  private static String posPortalPath = "/Users/quan/tron/pos-portal/build/contracts";
-  private String contractAddress = "src/test/java/org/tron/core/ibc/contractAddresses.json";
-  // node conf
-  private String fullnode = "47.252.19.181:50051";
-  // account
-  private String account1PriKey = "";   // nile
+  private static String contractPath = Config.contractPath;
+  private static String posPortalPath = Config.posPortalPath;
+  private String fullNode = Config.fullNode;
+  private String account1PriKey = Config.accountPriKey;
+  private String contractAddress = Config.contractAddress;
 
-  // server
   private WalletGrpc.WalletBlockingStub blockingStubFull = null;
 
   private byte[] getAddress(String priKey) {
@@ -51,7 +48,7 @@ public class AutoDeploy {
   public void beforeClass() {
     Wallet wallet = new Wallet();
     Wallet.setAddressPreFixByte(Parameter.CommonConstant.ADD_PRE_FIX_BYTE_MAINNET);
-    ManagedChannel fromChannelFull = ManagedChannelBuilder.forTarget(fullnode).usePlaintext(true).build();
+    ManagedChannel fromChannelFull = ManagedChannelBuilder.forTarget(fullNode).usePlaintext(true).build();
     blockingStubFull = WalletGrpc.newBlockingStub(fromChannelFull);
 
     PublicMethed.printAddress(account1PriKey);
