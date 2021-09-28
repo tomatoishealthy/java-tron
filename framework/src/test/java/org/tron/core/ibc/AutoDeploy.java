@@ -242,7 +242,7 @@ public class AutoDeploy {
     Contract.StakeManagerExtension.setCode(DeployBase.getCode(Contract.StakeManagerExtension));
     String StakeManagerExtensionAddr = DeployBase.deploy(Contract.StakeManagerExtension, blockingStubFull, account1PriKey);
     writeAddr(Contract.StakeManagerExtension.getName(), StakeManagerExtensionAddr);
-    System.out.println("ValidatorShareFactoryAddr: " + StakeManagerExtensionAddr);
+    System.out.println("StakeManagerExtension: " + StakeManagerExtensionAddr);
   }
 
   @Test
