@@ -27,14 +27,14 @@ public class DeployBase {
         String contractAddress;
         if (contract.getMethod().isEmpty()) {
             byte[] bytes = PublicMethed.deployContract(contract.getName(), contract.getAbi(), contract.getCode(), "", maxFeeLimit,
-                    0L, 0, originEnergyLimit, "0",
+                    0L, 100L, originEnergyLimit, "0",
                     0, null, key, getAddress(key),
                     blockingStubFull);
             contractAddress = StringUtil.encode58Check(bytes);
         } else {
             System.out.println("deploy with param");
             byte[] bytes = PublicMethed.deployContractWithConstantParam(contract.getName(), contract.getAbi(), contract.getCode(), contract.getMethod(), contract.getParam(), "", maxFeeLimit,
-                    0L, 0, originEnergyLimit, "0",
+                    0L, 100L, originEnergyLimit, "0",
                     0, null, key, getAddress(key),
                     blockingStubFull);
             contractAddress = StringUtil.encode58Check(bytes);
