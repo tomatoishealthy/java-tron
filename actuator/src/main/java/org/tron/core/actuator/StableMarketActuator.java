@@ -86,6 +86,7 @@ public class StableMarketActuator extends AbstractActuator {
 
       // distribute reward
       chainBaseManager.getStableMarketStore().addOracleRewardPool(ByteArray.toStr(destTokenId), Dec.newDec(feeAmount));
+      logger.info("stable: distribute exchange fee, token: {}, amount: {}", ByteArray.toStr(destTokenId), feeAmount);
 
       AccountCapsule ownerAccountCapsule = accountStore.get(fromAddress);
       AccountCapsule toAccountCapsule = accountStore.get(toAddress);
