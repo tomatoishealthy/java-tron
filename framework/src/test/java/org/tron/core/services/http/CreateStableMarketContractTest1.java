@@ -18,8 +18,10 @@ import org.tron.api.WalletGrpc;
 import org.tron.common.application.Application;
 import org.tron.common.application.TronApplicationContext;
 import org.tron.common.crypto.ECKey;
+import org.tron.common.parameter.CommonParameter;
 import org.tron.common.utils.ByteArray;
 import org.tron.common.utils.JsonUtil;
+import org.tron.common.utils.Sha256Hash;
 import org.tron.core.capsule.AccountCapsule;
 import org.tron.protos.Protocol;
 import org.tron.protos.contract.StableMarketContract.StableMarketExchangeContract;
@@ -75,13 +77,13 @@ public class CreateStableMarketContractTest1 {
 
   @Test
   public void testHttpCreateContract() throws IOException {
-    String urlPath = "/wallet/createstablemarketcontract";
+    String urlPath = "/wallet/createstablemarketexchange";
     String url = String.format("http://%s:%d%s", ip, fullHttpPort, urlPath);
     Map<String, Object> param = Maps.newHashMap();
     param.put("owner_address", account3);
     param.put("to_address", account2);
-    param.put("source_token_id", DEST_TOKEN_ID);
-    param.put("dest_token_id", TRX_SYMBOL);
+    param.put("source_asset_id", SOURCE_TOKEN_ID);
+    param.put("dest_asset_id", DEST_TOKEN_ID);
     param.put("amount", 440562);
     String response = sendPostRequest(url, JsonUtil.obj2Json(param));
     System.out.println(account1);
@@ -162,18 +164,20 @@ public class CreateStableMarketContractTest1 {
           blockingStubFull.createStableMarketExchange(stableMarketContract);
       Assert.assertNotNull(tx);
 
+
       Protocol.Transaction transaction = tx.getTransaction();
       transaction = signTransaction(from, transaction);
       GrpcAPI.Return response = broadcastTransaction(transaction, blockingStubFull);
+      System.out.println("id: " + Sha256Hash.of(true, transaction.getRawData().toByteArray()));
       System.out.println("from: " + ByteArray.toHexString(from.getAddress()));
       System.out.println("to: " + ByteArray.toHexString(to.getAddress()));
       System.out.println("source: " + fromToken + " , dest: " + toToken + ", amount: " + amount);
       System.out.println(response);
-      try {
-        Thread.sleep(300000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
+//      try {
+//        Thread.sleep(300);
+//      } catch (InterruptedException e) {
+//        e.printStackTrace();
+//      }
     }
   }
 
