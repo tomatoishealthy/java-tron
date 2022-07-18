@@ -291,7 +291,9 @@ public class SnapshotManager implements RevokingDatabase {
     Snapshot next = root;
     for (int i = 0; i < flushCount; ++i) {
       next = next.getNext();
-      if (!db.getDbName().equals("market_pair_price_to_order")) {
+      if (!db.getDbName().equals("market_pair_price_to_order")
+          && !db.getDbName().equals("witness")
+          && !db.getDbName().equals("witness_schedule")) {
         next.put(blockNumKey, Longs.toByteArray(currentBlockNum));
       }
       snapshots.add(next);
