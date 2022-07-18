@@ -3,6 +3,7 @@ package org.tron.core.db2.core;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -26,6 +27,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.tron.common.error.TronDBException;
 import org.tron.common.parameter.CommonParameter;
 import org.tron.common.storage.WriteOptionsWrapper;
+import org.tron.core.capsule.BlockCapsule;
 import org.tron.core.db.RevokingDatabase;
 import org.tron.core.db2.ISession;
 import org.tron.core.db2.common.DB;
@@ -33,6 +35,7 @@ import org.tron.core.db2.common.IRevokingDB;
 import org.tron.core.db2.common.Key;
 import org.tron.core.db2.common.Value;
 import org.tron.core.db2.common.WrappedByteArray;
+import org.tron.core.exception.BadItemException;
 import org.tron.core.exception.RevokingStoreIllegalStateException;
 import org.tron.core.store.CheckTmpStore;
 
@@ -70,6 +73,9 @@ public class SnapshotManager implements RevokingDatabase {
 
   @Setter
   private volatile int maxFlushCount = DEFAULT_MIN_FLUSH_COUNT;
+
+  private byte[] blockNumKey = "block_num".getBytes();
+  private long currentBlockNum;
 
   public SnapshotManager(String checkpointPath) {
   }
@@ -285,6 +291,9 @@ public class SnapshotManager implements RevokingDatabase {
     Snapshot next = root;
     for (int i = 0; i < flushCount; ++i) {
       next = next.getNext();
+      if (!db.getDbName().equals("market_pair_price_to_order")) {
+        next.put(blockNumKey, Longs.toByteArray(currentBlockNum));
+      }
       snapshots.add(next);
     }
 
@@ -345,6 +354,10 @@ public class SnapshotManager implements RevokingDatabase {
             Value v = e.getValue();
             batch.put(WrappedByteArray.of(Bytes.concat(simpleEncode(dbName), k.getBytes())),
                 WrappedByteArray.of(v.encode()));
+
+            if (db.getDbName().equals("block")) {
+              currentBlockNum = new BlockCapsule(v.getBytes()).getNum();
+            }
           }
         }
       }
@@ -378,10 +391,20 @@ public class SnapshotManager implements RevokingDatabase {
   // ensure run this method first after process start.
   @Override
   public void check() {
+    long bigestNum = 0;
+    long numInDb = 0;
+
     for (Chainbase db : dbs) {
       if (!Snapshot.isRoot(db.getHead())) {
         throw new IllegalStateException("first check.");
       }
+      byte[] value = db.getUnchecked(blockNumKey);
+      long num = -1;
+      if (value != null) {
+        num = Longs.fromByteArray(value);
+      }
+      numInDb = Math.max(numInDb, num);
+      logger.info("DB check, name: {}, num: {}", db.getDbName(), num);
     }
 
     if (!checkTmpStore.getDbSource().allKeys().isEmpty()) {
@@ -405,7 +428,23 @@ public class SnapshotManager implements RevokingDatabase {
           dbMap.get(db).getHead().remove(realKey);
         }
 
+        if (db.equals("block")) {
+          long nowNum = 0;
+          try {
+            nowNum = new BlockCapsule(realValue).getNum();
+          } catch (BadItemException badItemException) {
+            badItemException.printStackTrace();
+          }
+          bigestNum = Math.max(bigestNum, nowNum);
+        }
+
       }
+
+      if (numInDb > bigestNum) {
+        logger.error("DB not consistent, tmp num: {}, database num: {}", bigestNum, numInDb);
+        System.exit(-1);
+      }
+      logger.info("DB check, tmp num: {}, database num: {}", bigestNum, numInDb);
 
       dbs.forEach(db -> db.getHead().getRoot().merge(db.getHead()));
       retreat();
