@@ -293,6 +293,7 @@ public class SnapshotManager implements RevokingDatabase {
       next = next.getNext();
       if (!db.getDbName().equals("market_pair_price_to_order")
           && !db.getDbName().equals("witness")
+          && !db.getDbName().equals("votes")
           && !db.getDbName().equals("witness_schedule")) {
         next.put(blockNumKey, Longs.toByteArray(currentBlockNum));
       }
@@ -405,6 +406,7 @@ public class SnapshotManager implements RevokingDatabase {
       }
       if (!db.getDbName().equals("market_pair_price_to_order")
           && !db.getDbName().equals("witness")
+          && !db.getDbName().equals("votes")
           && !db.getDbName().equals("witness_schedule")) {
         byte[] value = db.getUnchecked(blockNumKey);
         long num = -1;
