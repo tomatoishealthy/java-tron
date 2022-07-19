@@ -457,11 +457,6 @@ public class SnapshotManager implements RevokingDatabase {
 
       }
 
-      if (bigestNum == 0 && !flag) {
-        logger.error("DB not consistent, checkpoint missing, tmp num: {}, database num: {}", bigestNum, numInDb);
-        System.exit(-1);
-      }
-
       if (numInDb > bigestNum) {
         logger.error("DB not consistent, tmp num: {}, database num: {}", bigestNum, numInDb);
         System.exit(-1);
@@ -470,6 +465,11 @@ public class SnapshotManager implements RevokingDatabase {
 
       dbs.forEach(db -> db.getHead().getRoot().merge(db.getHead()));
       retreat();
+    }
+
+    if (bigestNum == 0 && !flag) {
+      logger.error("DB not consistent, checkpoint missing, tmp num: {}, database num: {}", bigestNum, numInDb);
+      System.exit(-1);
     }
 
     unChecked = false;
