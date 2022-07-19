@@ -395,19 +395,32 @@ public class SnapshotManager implements RevokingDatabase {
   public void check() {
     long bigestNum = 0;
     long numInDb = 0;
+    boolean flag = true;
+    long sum = 0;
+    int size = 0;
 
     for (Chainbase db : dbs) {
       if (!Snapshot.isRoot(db.getHead())) {
         throw new IllegalStateException("first check.");
       }
-      byte[] value = db.getUnchecked(blockNumKey);
-      long num = -1;
-      if (value != null) {
-        num = Longs.fromByteArray(value);
+      if (!db.getDbName().equals("market_pair_price_to_order")
+          && !db.getDbName().equals("witness")
+          && !db.getDbName().equals("witness_schedule")) {
+        byte[] value = db.getUnchecked(blockNumKey);
+        long num = -1;
+        if (value != null) {
+          num = Longs.fromByteArray(value);
+        }
+        numInDb = Math.max(numInDb, num);
+        sum += numInDb;
+        size++;
+        logger.info("DB check, name: {}, num: {}", db.getDbName(), num);
       }
-      numInDb = Math.max(numInDb, num);
-      logger.info("DB check, name: {}, num: {}", db.getDbName(), num);
     }
+    if(sum != size*numInDb) {
+      flag = false;
+    }
+
 
     if (!checkTmpStore.getDbSource().allKeys().isEmpty()) {
       Map<String, Chainbase> dbMap = dbs.stream()
@@ -440,6 +453,11 @@ public class SnapshotManager implements RevokingDatabase {
           bigestNum = Math.max(bigestNum, nowNum);
         }
 
+      }
+
+      if (bigestNum == 0 && !flag) {
+        logger.error("DB not consistent, checkpoint missing, tmp num: {}, database num: {}", bigestNum, numInDb);
+        System.exit(-1);
       }
 
       if (numInDb > bigestNum) {
