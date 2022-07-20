@@ -41,6 +41,9 @@ public class MetricsHistogram {
         "type");
     init(MetricKeys.Histogram.HTTP_BYTES, "http_bytes traffic.",
         "url", "status");
+
+    init(MetricKeys.Histogram.DB_FLUSH, "flush db.",
+         "type");
   }
 
   private MetricsHistogram() {

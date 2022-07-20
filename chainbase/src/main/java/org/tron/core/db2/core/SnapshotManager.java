@@ -20,12 +20,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
+
+import io.prometheus.client.Histogram;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.tron.common.error.TronDBException;
 import org.tron.common.parameter.CommonParameter;
+import org.tron.common.prometheus.MetricKeys;
+import org.tron.common.prometheus.Metrics;
 import org.tron.common.storage.WriteOptionsWrapper;
 import org.tron.core.capsule.BlockCapsule;
 import org.tron.core.db.RevokingDatabase;
@@ -294,6 +298,7 @@ public class SnapshotManager implements RevokingDatabase {
       if (!db.getDbName().equals("market_pair_price_to_order")
           && !db.getDbName().equals("witness")
           && !db.getDbName().equals("votes")
+          && !db.getDbName().equals("recent-transaction")
           && !db.getDbName().equals("witness_schedule")) {
         next.put(blockNumKey, Longs.toByteArray(currentBlockNum));
       }
@@ -319,10 +324,20 @@ public class SnapshotManager implements RevokingDatabase {
     if (shouldBeRefreshed()) {
       try {
         long start = System.currentTimeMillis();
+        Histogram.Timer requestTimer = Metrics.histogramStartTimer(
+            MetricKeys.Histogram.DB_FLUSH, "delete");
         deleteCheckpoint();
+        Metrics.histogramObserve(requestTimer);
+
+        Histogram.Timer createTime = Metrics.histogramStartTimer(
+            MetricKeys.Histogram.DB_FLUSH, "create");
         createCheckpoint();
+        Metrics.histogramObserve(createTime);
         long checkPointEnd = System.currentTimeMillis();
+        Histogram.Timer flushTimer = Metrics.histogramStartTimer(
+            MetricKeys.Histogram.DB_FLUSH, "flush");
         refresh();
+        Metrics.histogramObserve(flushTimer);
         flushCount = 0;
         logger.info("flush cost:{}, create checkpoint cost:{}, refresh cost:{}",
             System.currentTimeMillis() - start,
@@ -407,6 +422,7 @@ public class SnapshotManager implements RevokingDatabase {
       if (!db.getDbName().equals("market_pair_price_to_order")
           && !db.getDbName().equals("witness")
           && !db.getDbName().equals("votes")
+          && !db.getDbName().equals("recent-transaction")
           && !db.getDbName().equals("witness_schedule")) {
         byte[] value = db.getUnchecked(blockNumKey);
         long num = -1;
