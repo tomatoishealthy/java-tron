@@ -27,4 +27,6 @@ public interface BatchSourceInter<K, V> extends SourceInter<K, V> {
   void updateByBatch(Map<K, V> rows);
 
   void updateByBatch(Map<K, V> rows, WriteOptionsWrapper writeOptions);
+
+  void putWithOption(byte[] key, byte[] item, WriteOptionsWrapper writeOptions);
 }

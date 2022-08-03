@@ -391,6 +391,21 @@ public class RocksDbDataSourceImpl extends DbStat implements DbSourceInter<byte[
     }
   }
 
+  @Override
+  public void putWithOption(byte[] key, byte[] value, WriteOptionsWrapper options) {
+    if (quitIfNotAlive()) {
+      return;
+    }
+    resetDbLock.readLock().lock();
+    try {
+      database.put(options.rocks, key, value);
+    } catch (RocksDBException e) {
+      throw new RuntimeException(e);
+    } finally {
+      resetDbLock.readLock().unlock();
+    }
+  }
+
   public List<byte[]> getKeysNext(byte[] key, long limit) {
     if (quitIfNotAlive()) {
       return new ArrayList<>();

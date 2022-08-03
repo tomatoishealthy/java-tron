@@ -470,6 +470,16 @@ public class LevelDbDataSourceImpl extends DbStat implements DbSourceInter<byte[
   }
 
   @Override
+  public void putWithOption(byte[] key, byte[] value, WriteOptionsWrapper options) {
+    resetDbLock.readLock().lock();
+    try {
+      database.put(key, value, options.level);
+    } finally {
+      resetDbLock.readLock().unlock();
+    }
+  }
+
+  @Override
   public boolean flush() {
     return false;
   }
