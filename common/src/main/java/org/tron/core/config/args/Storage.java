@@ -67,6 +67,10 @@ public class Storage {
   private static final String MAX_OPEN_FILES_CONFIG_KEY = "maxOpenFiles";
   private static final String EVENT_SUBSCRIBE_CONTRACT_PARSE = "event.subscribe.contractParse";
 
+  private static final String CHECKPOINT_VERSION_KEY = "checkpoint.version";
+  private static final String CHECKPOINT_SYNC_KEY = "checkpoint.sync";
+  private static final String CHECKPOINT_RESERVE_KEY = "checkpoint.reserve";
+
   /**
    * Default values of directory
    */
@@ -77,6 +81,9 @@ public class Storage {
   private static final String DEFAULT_DB_DIRECTORY = "database";
   private static final String DEFAULT_INDEX_DIRECTORY = "index";
   private static final String DEFAULT_INDEX_SWITCH = "on";
+  private static final int DEFAULT_CHECKPOINT_VERSION = 2;
+  private static final boolean DEFAULT_CHECKPOINT_SYNC = true;
+  private static final long DEFAULT_CHECKPOINT_RESERVE = 10;
   private Config storage;
 
   /**
@@ -116,6 +123,18 @@ public class Storage {
   @Getter
   @Setter
   private String transactionHistorySwitch;
+
+  @Getter
+  @Setter
+  private int checkpointVersion;
+
+  @Getter
+  @Setter
+  private boolean checkpointSync;
+
+  @Getter
+  @Setter
+  private long checkpointReserve;
 
   private Options defaultDbOptions;
 
@@ -166,6 +185,24 @@ public class Storage {
     return config.hasPath(TRANSACTIONHISTORY_SWITCH_CONFIG_KEY)
         ? config.getString(TRANSACTIONHISTORY_SWITCH_CONFIG_KEY)
         : DEFAULT_TRANSACTIONHISTORY_SWITCH;
+  }
+
+  public static int getCheckpointVersionFromConfig(final Config config) {
+    return config.hasPath(CHECKPOINT_VERSION_KEY)
+        ? config.getInt(CHECKPOINT_VERSION_KEY)
+        : DEFAULT_CHECKPOINT_VERSION;
+  }
+
+  public static boolean getCheckpointSyncFromConfig(final Config config) {
+    return config.hasPath(CHECKPOINT_SYNC_KEY)
+        ? config.getBoolean(CHECKPOINT_SYNC_KEY)
+        : DEFAULT_CHECKPOINT_SYNC;
+  }
+
+  public static long getCheckpointReserveFromConfig(final Config config) {
+    return config.hasPath(CHECKPOINT_RESERVE_KEY)
+        ? config.getLong(CHECKPOINT_RESERVE_KEY)
+        : DEFAULT_CHECKPOINT_RESERVE;
   }
 
   private  Property createProperty(final ConfigObject conf) {

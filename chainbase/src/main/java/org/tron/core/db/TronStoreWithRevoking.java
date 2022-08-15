@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -25,16 +26,15 @@ import org.tron.common.storage.rocksdb.RocksDbDataSourceImpl;
 import org.tron.common.utils.StorageUtils;
 import org.tron.core.capsule.ProtoCapsule;
 import org.tron.core.db.common.iterator.DBIterator;
-import org.tron.core.db2.common.DB;
-import org.tron.core.db2.common.IRevokingDB;
-import org.tron.core.db2.common.LevelDB;
-import org.tron.core.db2.common.RocksDB;
+import org.tron.core.db2.common.*;
 import org.tron.core.db2.core.Chainbase;
 import org.tron.core.db2.core.ITronChainBase;
 import org.tron.core.db2.core.RevokingDBWithCachingOldValue;
 import org.tron.core.db2.core.SnapshotRoot;
 import org.tron.core.exception.BadItemException;
 import org.tron.core.exception.ItemNotFoundException;
+
+import static org.tron.common.utils.Commons.CURRENT_FLUSHED_BLOCK_NUM_KEY;
 
 
 @Slf4j(topic = "DB")
@@ -225,6 +225,14 @@ public abstract class TronStoreWithRevoking<T extends ProtoCapsule> implements I
         throw new RuntimeException(e1);
       }
     });
+//    return Iterators.filter(
+//        Iterators.transform(revokingDB.iterator(), e -> {
+//          try {
+//            return Maps.immutableEntry(e.getKey(), of(e.getValue()));
+//          } catch (BadItemException e1) {
+//            throw new RuntimeException(e1);
+//          }
+//        }), e -> !Arrays.equals(CURRENT_FLUSHED_BLOCK_NUM_KEY, e.getKey()));
   }
 
   public long size() {

@@ -1,8 +1,11 @@
 package org.tron.core.db2;
 
+import static org.tron.common.utils.Commons.CURRENT_FLUSHED_BLOCK_NUM_KEY;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +18,7 @@ import org.junit.Test;
 import org.tron.common.application.Application;
 import org.tron.common.application.ApplicationFactory;
 import org.tron.common.application.TronApplicationContext;
+import org.tron.common.parameter.CommonParameter;
 import org.tron.common.utils.ByteArray;
 import org.tron.common.utils.FileUtil;
 import org.tron.common.utils.SessionOptional;
@@ -114,6 +118,55 @@ public class RevokingDbWithCacheNewValueTest {
     Assert.assertNull(tronDatabase.get(testProtoCapsule.getData()));
     dialog.reset();
   }
+
+//  @Test
+//  public synchronized void testIterator() {
+//    revokingDatabase = context.getBean(SnapshotManager.class);
+//    revokingDatabase.enable();
+//    tronDatabase = new TestRevokingTronStore("testRevokingDBWithCacheNewValue-testIterator");
+//    revokingDatabase.add(tronDatabase.getRevokingDB());
+//
+//    while (revokingDatabase.size() != 0) {
+//      revokingDatabase.pop();
+//    }
+//    ProtoCapsuleTest testProtoCapsule1 = new ProtoCapsuleTest(CURRENT_FLUSHED_BLOCK_NUM_KEY);
+//    ProtoCapsuleTest testProtoCapsule2 = new ProtoCapsuleTest("2".getBytes());
+//    ProtoCapsuleTest testProtoCapsule3 = new ProtoCapsuleTest("key1".getBytes());
+//    ProtoCapsuleTest testProtoCapsule4 = new ProtoCapsuleTest("aaa".getBytes());
+//
+//    tronDatabase.put(testProtoCapsule1.getData(), testProtoCapsule1);
+//    tronDatabase.put(testProtoCapsule2.getData(), testProtoCapsule2);
+//
+//    SessionOptional dialog = SessionOptional.instance().setValue(revokingDatabase.buildSession());
+//
+//    try (ISession tmpSession = revokingDatabase.buildSession()) {
+//      tronDatabase.put(testProtoCapsule3.getData(), testProtoCapsule3);
+//      tmpSession.merge();
+//    }
+//    // check data in db
+//    for (Map.Entry<byte[], ProtoCapsuleTest> entry : tronDatabase) {
+//      Assert.assertFalse(Arrays.equals(CURRENT_FLUSHED_BLOCK_NUM_KEY, entry.getKey()));
+//    }
+//
+//    try (ISession tmpSession = revokingDatabase.buildSession()) {
+//      tronDatabase.put(testProtoCapsule1.getData(), testProtoCapsule1);
+//      tronDatabase.put(testProtoCapsule4.getData(), testProtoCapsule4);
+//      tmpSession.merge();
+//    }
+//
+//    // check data in impl
+//    int count = 0;
+//    for (Map.Entry<byte[], ProtoCapsuleTest> entry : tronDatabase) {
+//      Assert.assertFalse(Arrays.equals(CURRENT_FLUSHED_BLOCK_NUM_KEY, entry.getKey()));
+//      count++;
+//    }
+//    Assert.assertEquals(3, count);
+//
+//    ProtoCapsuleTest value = tronDatabase.get(CURRENT_FLUSHED_BLOCK_NUM_KEY);
+//    Assert.assertEquals(testProtoCapsule1, value);
+//
+//    dialog.reset();
+//  }
 
 
   @Test

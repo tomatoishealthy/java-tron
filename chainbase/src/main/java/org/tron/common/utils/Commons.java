@@ -18,6 +18,8 @@ public class Commons {
 
   public static final int ASSET_ISSUE_COUNT_LIMIT_MAX = 1000;
 
+  public static final byte[] CURRENT_FLUSHED_BLOCK_NUM_KEY = "current_flushed_block_num".getBytes();
+
   public static byte[] decode58Check(String input) {
     byte[] decodeCheck = Base58.decode(input);
     if (decodeCheck.length <= 4) {
