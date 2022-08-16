@@ -24,12 +24,15 @@ import javax.annotation.PostConstruct;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import io.prometheus.client.Histogram;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.tron.common.error.TronDBException;
 import org.tron.common.parameter.CommonParameter;
+import org.tron.common.prometheus.MetricKeys;
+import org.tron.common.prometheus.Metrics;
 import org.tron.common.storage.WriteOptionsWrapper;
 import org.tron.common.utils.ByteArray;
 import org.tron.core.capsule.BlockCapsule;
@@ -351,10 +354,20 @@ public class SnapshotManager implements RevokingDatabase {
       try {
         long start = System.currentTimeMillis();
         if (!isV2Open()) {
+          Histogram.Timer requestTimer = Metrics.histogramStartTimer(
+              MetricKeys.Histogram.DB_FLUSH, "delete");
           deleteCheckpoint();
+          Metrics.histogramObserve(requestTimer);
+
+          Histogram.Timer createTimer = Metrics.histogramStartTimer(
+              MetricKeys.Histogram.DB_FLUSH, "create");
           createCheckpoint();
+          Metrics.histogramObserve(createTimer);
         } else {
+          Histogram.Timer createV2 = Metrics.histogramStartTimer(
+              MetricKeys.Histogram.DB_FLUSH, "create2");
           createCheckpointV2();
+          Metrics.histogramObserve(createV2);
         }
         long checkPointEnd = System.currentTimeMillis();
         refresh();

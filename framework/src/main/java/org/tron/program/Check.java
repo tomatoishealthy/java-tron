@@ -132,7 +132,6 @@ public class Check {
 //      System.out.println("--------");
 //      System.out.println("source compare");
 //      System.out.println("--------");
-        System.out.println("start");
         long start = System.currentTimeMillis();
         long total = 0;
         long diffCount = 0;
