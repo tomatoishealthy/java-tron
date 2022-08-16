@@ -2,6 +2,10 @@ package org.tron.program;
 
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.bouncycastle.util.Strings;
 import org.iq80.leveldb.*;
 import org.tron.common.utils.ByteArray;
@@ -12,6 +16,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.fusesource.leveldbjni.JniDBFactory.factory;
 import static org.tron.program.DBConvert.newDefaultLevelDbOptions;
@@ -20,14 +27,18 @@ import static org.tron.program.DBConvert.newDefaultLevelDbOptions;
 public class Check {
 
 
-  public static void main(String[] args) throws IOException, InterruptedException {
-//    boolean sync = Boolean.parseBoolean(args[0]);
-//    int loop = Integer.parseInt(args[1]);
-//    int valueSize = Integer.parseInt(args[2]);
-    Options dbOptions = newDefaultLevelDbOptions();
+  public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
+    boolean type = Boolean.parseBoolean(args[0]);
+    String sourcePath = args[1];
+    String destPath = args[2];
+    boolean details = false;
+    if (args.length >= 4) {
+      details = Boolean.parseBoolean(args[3]);
+    }
+    //Options dbOptions = newDefaultLevelDbOptions();
     //CheckpointComparatorForLevelDB comparator = new CheckpointComparatorForLevelDB();
     //dbOptions.comparator(comparator);
-    DB db = initDB("/Users/quan/tron/java-tron/output-directory/database/checkpoint", dbOptions);
+    //DB db = initDB("/Users/quan/tron/java-tron/output-directory/database/checkpoint", dbOptions);
 //    WriteOptions writeOptions = new WriteOptions();
 //    writeOptions.sync(sync);
     // db.put(Longs.toByteArray(1000000), "test".getBytes());
@@ -58,14 +69,20 @@ public class Check {
 //      Thread.sleep(1000);
 //    }
 
-    read(db);
+    //read(db);
 
 //    checkDBEqual("/Users/quan/tron/java-tron/output-directory/database/IncrementalMerkleTree",
 //        "/Users/quan/tron/java-tron/output-directory_bak/database/IncrementalMerkleTree", dbOptions);
+    if (type) {
+      checkAllDBEqual(sourcePath, destPath, details);
+    } else {
+      Options dbOptions = newDefaultLevelDbOptions();
+      checkDBEqual(sourcePath, sourcePath, destPath, dbOptions, details);
+    }
 
   }
 
-  public static void checkAllDBEqual(String sourcePath, String destPath) throws IOException {
+  public static void checkAllDBEqual(String sourcePath, String destPath, boolean details) throws IOException, ExecutionException, InterruptedException {
     List<String> dbs = Lists.newArrayList();
     File[] sourceFiles = new File(sourcePath).listFiles();
     for(File file: sourceFiles) {
@@ -74,84 +91,84 @@ public class Check {
       }
     }
     List<String> diffDbs = Lists.newArrayList();
-    int totalDB = 0;
+    List<ListenableFuture<?>> futures = new ArrayList<>(dbs.size());
     for(String db: dbs) {
-      if(db.equals("market_pair_price_to_order")) {
+      if(db.equals("market_pair_price_to_order") ||
+          db.equals("checkpoint") ||
+          db.equals("tmp")
+      ) {
         continue;
       }
-      System.out.println("db: " + db);
-      String sourceDBPath = Paths.get(sourcePath, db).toString();
-      String destDBPath = Paths.get(destPath, db).toString();
-      Options dbOptions = newDefaultLevelDbOptions();
-      boolean flag = checkDBEqual(sourceDBPath, destDBPath, dbOptions);
-      if (!flag) {
-        diffDbs.add(db);
-      }
-      totalDB++;
-      System.out.println();
-      System.out.println();
+      futures.add(MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor()).submit(() -> {
+        System.out.println("start check: " + db);
+        String sourceDBPath = Paths.get(sourcePath, db).toString();
+        String destDBPath = Paths.get(destPath, db).toString();
+        Options dbOptions = newDefaultLevelDbOptions();
+        boolean flag = false;
+        try {
+          flag = checkDBEqual(db, sourceDBPath, destDBPath, dbOptions, details);
+        } catch (IOException e) {
+          e.printStackTrace();
+        }
+        if (!flag) {
+          diffDbs.add(db);
+        }
+      }));
     }
-    System.out.println("total compared: " + totalDB);
+
+    Future<?> future = Futures.allAsList(futures);
+    future.get();
+    System.out.println("total dbs: +" + futures.size());
     System.out.println("diff dbs: " + diffDbs);
 
-//    Options dbOptions = newDefaultLevelDbOptions();
-//    checkDBEqual("/Users/quan/tron/java-tron/output-directory/database/account",
-//        "/Users/quan/tron/java-tron/output-directory_bak/database/account", dbOptions);
   }
 
-  public static boolean checkDBEqual(String sourcePath, String destPath, Options options) throws IOException {
+  public static boolean checkDBEqual(String name, String sourcePath, String destPath, Options options, boolean details) throws IOException {
     boolean flag = true;
     DB source = initDB(sourcePath, options);
     DB dest = initDB(destPath, options);
     try (DBIterator sourceIterator = source.iterator();
          DBIterator destIterator = dest.iterator();) {
-      System.out.println("--------");
-      System.out.println("source compare");
-      System.out.println("--------");
-      long total = 0;
-      long diffCount = 0;
-      for (sourceIterator.seekToFirst(); sourceIterator.hasNext(); sourceIterator.next()) {
-        total++;
-        byte[] key = sourceIterator.peekNext().getKey();
-        byte[] value = sourceIterator.peekNext().getValue();
-        byte[] destValue = dest.get(key);
-        if (destValue == null || !Arrays.equals(value, destValue)) {
-          System.out.println("db not consistent");
-          System.out.println("key: " + ByteArray.toHexString(key));
-          //System.out.println("source value: " + value);
-          //System.out.println("dest value: " + destValue);
-          diffCount++;
-        }
-      }
-      flag = diffCount == 0;
-      System.out.println("--------");
-      System.out.println("total num: " + total);
-      System.out.println("There are " + diffCount + " diff between source and dest");
-      System.out.println("--------");
+//      System.out.println("--------");
+//      System.out.println("source compare");
+//      System.out.println("--------");
+        System.out.println("start");
+        long start = System.currentTimeMillis();
+        long total = 0;
+        long diffCount = 0;
+        for (sourceIterator.seekToFirst(), destIterator.seekToFirst();
+             sourceIterator.hasNext();
+             sourceIterator.next(), destIterator.next()) {
+          total++;
+          byte[] key = sourceIterator.peekNext().getKey();
+          byte[] value = sourceIterator.peekNext().getValue();
 
-      System.out.println("--------");
-      System.out.println("dest compare");
-      System.out.println("--------");
-      diffCount = 0;
-      total = 0;
-      for (destIterator.seekToFirst(); destIterator.hasNext(); destIterator.next()) {
-        total++;
-        byte[] key = destIterator.peekNext().getKey();
-        byte[] value = destIterator.peekNext().getValue();
-        byte[] sourceValue = source.get(key);
-        if (sourceValue == null || !Arrays.equals(value, sourceValue)) {
-          System.out.println("db not consistent");
-          System.out.println("key: " + ByteArray.toHexString(key));
-          System.out.println("dest value: " + value.length);
-          System.out.println("source value: " + sourceValue);
-          diffCount++;
+          byte[] destkey = destIterator.peekNext().getKey();
+          byte[] destvalue = destIterator.peekNext().getValue();
+          if (!Arrays.equals(key, destkey) ||
+              !Arrays.equals(value, destvalue)) {
+            if (details) {
+              System.out.println("db not consistent");
+              System.out.println("key: " + ByteArray.toHexString(key));
+              System.out.println("source value: " + value);
+              System.out.println("dest value: " + destvalue);
+            }
+            diffCount++;
+          }
         }
-      }
-      flag = diffCount == 0;
+        flag = diffCount == 0;
+        System.out.println("--------");
+        if (destIterator.hasNext()) {
+          System.out.println("db not consistent, dest still has data");
+          flag = false;
+        }
+        System.out.println("db: " + name);
+        System.out.println("total num: " + total);
+        System.out.println("There are " + diffCount + " diff between source and dest");
+        System.out.println("cost: " + (System.currentTimeMillis() - start));
       System.out.println("--------");
-      System.out.println("total num: " + total);
-      System.out.println("There are " + diffCount + " diff between dest and source");
-      System.out.println("--------");
+      System.out.println();
+
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
