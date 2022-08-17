@@ -67,9 +67,9 @@ public class Storage {
   private static final String MAX_OPEN_FILES_CONFIG_KEY = "maxOpenFiles";
   private static final String EVENT_SUBSCRIBE_CONTRACT_PARSE = "event.subscribe.contractParse";
 
-  private static final String CHECKPOINT_VERSION_KEY = "checkpoint.version";
-  private static final String CHECKPOINT_SYNC_KEY = "checkpoint.sync";
-  private static final String CHECKPOINT_RESERVE_KEY = "checkpoint.reserve";
+  private static final String CHECKPOINT_VERSION_KEY = "storage.checkpoint.version";
+  private static final String CHECKPOINT_SYNC_KEY = "storage.checkpoint.sync";
+  private static final String CHECKPOINT_RESERVE_KEY = "storage.checkpoint.reserve";
 
   /**
    * Default values of directory
@@ -81,9 +81,9 @@ public class Storage {
   private static final String DEFAULT_DB_DIRECTORY = "database";
   private static final String DEFAULT_INDEX_DIRECTORY = "index";
   private static final String DEFAULT_INDEX_SWITCH = "on";
-  private static final int DEFAULT_CHECKPOINT_VERSION = 2;
+  private static final int DEFAULT_CHECKPOINT_VERSION = 1;
   private static final boolean DEFAULT_CHECKPOINT_SYNC = true;
-  private static final long DEFAULT_CHECKPOINT_RESERVE = 10;
+  private static final long DEFAULT_CHECKPOINT_RESERVE = 100;
   private Config storage;
 
   /**
