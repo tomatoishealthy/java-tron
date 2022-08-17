@@ -137,4 +137,8 @@ public abstract class TronDatabase<T> implements ITronChainBase<T> {
   public Iterator<Entry<byte[], T>> iterator() {
     throw new UnsupportedOperationException();
   }
+
+  public void compact(byte[] start, byte[] end) {
+    dbSource.compact(start, end);
+  }
 }

@@ -553,4 +553,9 @@ public class LevelDbDataSourceImpl extends DbStat implements DbSourceInter<byte[
     this.statProperty();
   }
 
+  @Override
+  public void compact(byte[] start, byte[] end) {
+    database.compactRange(start, end);
+  }
+
 }

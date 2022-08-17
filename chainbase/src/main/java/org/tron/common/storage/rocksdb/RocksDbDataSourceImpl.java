@@ -585,4 +585,13 @@ public class RocksDbDataSourceImpl extends DbStat implements DbSourceInter<byte[
   @Override public void stat() {
     this.statProperty();
   }
+
+  @Override
+  public void compact(byte[] start, byte[] end) {
+    try {
+      database.compactRange(start, end);
+    } catch (RocksDBException e) {
+      throw new RuntimeException(e);
+    }
+  }
 }

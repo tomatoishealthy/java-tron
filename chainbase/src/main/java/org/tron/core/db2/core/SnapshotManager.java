@@ -482,13 +482,23 @@ public class SnapshotManager implements RevokingDatabase {
     if (dropCount <= 0) {
       return;
     }
+    byte[] start = null;
+    byte[] end = null;
+    boolean first = true;
     for (Map.Entry<byte[], byte[]> entry: checkPointV2Store.getDbSource()) {
-      checkPointV2Store.delete(entry.getKey());
+      byte[] key = entry.getKey();
+      checkPointV2Store.delete(key);
       logger.info("checkpoint delete, number: {}", Longs.fromByteArray(entry.getKey()));
+      if (first) {
+        start = key;
+        first = false;
+      }
       if (--dropCount == 0) {
+        end = key;
         break;
       }
     }
+    checkPointV2Store.compact(start, end);
   }
 
   // ensure run this method first after process start.
