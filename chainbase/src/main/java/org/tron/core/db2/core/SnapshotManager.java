@@ -480,6 +480,9 @@ public class SnapshotManager implements RevokingDatabase {
   }
 
   private void pruneCheckpoint() {
+    if (unChecked) {
+      return;
+    }
     long dropCount = checkPointV2Store.getDbSource().allKeys().size() - checkpointReserve;
     if (dropCount <= 0) {
       return;
@@ -488,7 +491,7 @@ public class SnapshotManager implements RevokingDatabase {
       byte[] key = entry.getKey();
       long blockNumber = Longs.fromByteArray(Arrays.copyOf(key, 8));
       long timestamp = Longs.fromByteArray(Arrays.copyOfRange(key, 8, 16));
-      if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS) {
+      if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS * 2) {
         break;
       }
       checkPointV2Store.delete(key);
