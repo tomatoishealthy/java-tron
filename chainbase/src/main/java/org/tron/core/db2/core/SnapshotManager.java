@@ -55,6 +55,7 @@ public class SnapshotManager implements RevokingDatabase {
   public static final int DEFAULT_MAX_FLUSH_COUNT = 200;
   public static final int DEFAULT_MIN_FLUSH_COUNT = 1;
   private static final int DEFAULT_STACK_MAX_SIZE = 256;
+  private static final long ONE_MINUTE_MILLS = 60*1000L;
   @Getter
   private List<Chainbase> dbs = new ArrayList<>();
   @Getter
@@ -112,7 +113,7 @@ public class SnapshotManager implements RevokingDatabase {
       } catch (Throwable t) {
         logger.error("Exception in prune checkpoint", t);
       }
-    }, 3000, 3600, TimeUnit.MILLISECONDS);
+    }, 60000, 3600, TimeUnit.MILLISECONDS);
 
 
     exitThread =  new Thread(() -> {
@@ -451,7 +452,8 @@ public class SnapshotManager implements RevokingDatabase {
         throw new TronDBException("create checkpoint failed, block num should not be -1");
       }
       checkPointV2Store.getDbSource().putWithOption(
-          Longs.toByteArray(currentBlockNum),
+          Bytes.concat(Longs.toByteArray(currentBlockNum),
+              Longs.toByteArray(System.currentTimeMillis())),
           cp.build().toByteArray(),
           WriteOptionsWrapper.getInstance().sync(true));
 
@@ -482,23 +484,20 @@ public class SnapshotManager implements RevokingDatabase {
     if (dropCount <= 0) {
       return;
     }
-    byte[] start = null;
-    byte[] end = null;
-    boolean first = true;
     for (Map.Entry<byte[], byte[]> entry: checkPointV2Store.getDbSource()) {
       byte[] key = entry.getKey();
-      checkPointV2Store.delete(key);
-      logger.info("checkpoint delete, number: {}", Longs.fromByteArray(entry.getKey()));
-      if (first) {
-        start = key;
-        first = false;
+      long blockNumber = Longs.fromByteArray(Arrays.copyOf(key, 8));
+      long timestamp = Longs.fromByteArray(Arrays.copyOfRange(key, 8, 16));
+      if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS) {
+        break;
       }
+      checkPointV2Store.delete(key);
+      logger.info("checkpoint prune, number: {}", blockNumber);
       if (--dropCount == 0) {
-        end = key;
         break;
       }
     }
-    checkPointV2Store.compact(start, end);
+    checkPointV2Store.compact(null, null);
   }
 
   // ensure run this method first after process start.
@@ -607,7 +606,7 @@ public class SnapshotManager implements RevokingDatabase {
     long currentBlockNum = -1;
     for (Map.Entry<byte[], byte[]> i: checkPointV2Store.getDbSource()) {
       advance();
-      currentBlockNum = Longs.fromByteArray(i.getKey());
+      currentBlockNum = Longs.fromByteArray(Arrays.copyOfRange(i.getKey(), 0, 8));
       if (currentBlockNum < 0) {
         logger.error("checkpoint data corrupt, currentBlockNum: {}", currentBlockNum);
         System.exit(-1);
