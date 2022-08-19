@@ -500,7 +500,7 @@ public class SnapshotManager implements RevokingDatabase {
         break;
       }
     }
-    checkPointV2Store.compact(null, null);
+   // checkPointV2Store.compact(null, null);
   }
 
   // ensure run this method first after process start.
