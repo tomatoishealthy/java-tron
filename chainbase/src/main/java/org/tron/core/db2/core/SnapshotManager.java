@@ -608,7 +608,6 @@ public class SnapshotManager implements RevokingDatabase {
 
   private void checkV2() {
     logger.info("checkpoint version: {}", CommonParameter.getInstance().getStorage().getCheckpointVersion());
-    logger.info("checkpoint reserve: {}", CommonParameter.getInstance().getStorage().getCheckpointReserve());
     logger.info("checkpoint sync: {}", CommonParameter.getInstance().getStorage().isCheckpointSync());
     Set<byte[]> allKeys = checkPointV2Store.getDbSource().allKeys();
     // todo: review this logic

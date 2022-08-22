@@ -34,9 +34,6 @@ import org.tron.core.db2.core.SnapshotRoot;
 import org.tron.core.exception.BadItemException;
 import org.tron.core.exception.ItemNotFoundException;
 
-import static org.tron.common.utils.Commons.CURRENT_FLUSHED_BLOCK_NUM_KEY;
-
-
 @Slf4j(topic = "DB")
 public abstract class TronStoreWithRevoking<T extends ProtoCapsule> implements ITronChainBase<T> {
 
