@@ -1,7 +1,5 @@
 package org.tron.core.db2;
 
-import static org.tron.common.utils.Commons.CURRENT_FLUSHED_BLOCK_NUM_KEY;
-
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
