@@ -102,7 +102,6 @@ public class SnapshotManager implements RevokingDatabase {
     checkpointVersion = CommonParameter.getInstance().getStorage().getCheckpointVersion();
     // prune checkpoint
     pruneCheckpointThread.scheduleWithFixedDelay(() -> {
-      logger.info("start checkpoint prune1");
       try {
         if (isV2Open() && !unChecked) {
           pruneCheckpoint();
@@ -532,7 +531,6 @@ public class SnapshotManager implements RevokingDatabase {
   }
 
   private void pruneCheckpoint() {
-    logger.info("start checkpoint prune2");
     if (unChecked) {
       return;
     }
