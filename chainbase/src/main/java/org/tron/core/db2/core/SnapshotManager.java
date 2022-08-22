@@ -109,7 +109,7 @@ public class SnapshotManager implements RevokingDatabase {
       } catch (Throwable t) {
         logger.error("Exception in prune checkpoint", t);
       }
-    }, 300000, 3600, TimeUnit.MILLISECONDS);
+    }, 120000, 3600, TimeUnit.MILLISECONDS);
 
 
     exitThread =  new Thread(() -> {
