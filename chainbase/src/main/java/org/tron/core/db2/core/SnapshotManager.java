@@ -102,6 +102,7 @@ public class SnapshotManager implements RevokingDatabase {
     checkpointVersion = CommonParameter.getInstance().getStorage().getCheckpointVersion();
     // prune checkpoint
     pruneCheckpointThread.scheduleWithFixedDelay(() -> {
+      logger.info("start checkpoint prune1");
       try {
         if (isV2Open() && !unChecked) {
           pruneCheckpoint();
@@ -531,25 +532,21 @@ public class SnapshotManager implements RevokingDatabase {
   }
 
   private void pruneCheckpoint() {
+    logger.info("start checkpoint prune2");
     if (unChecked) {
       return;
     }
     long prevBlockNumber = -1;
-    boolean first = true;
     for (Map.Entry<byte[], byte[]> entry: checkPointV2Store.getDbSource()) {
       byte[] key = entry.getKey();
       long blockNumber = Longs.fromByteArray(Arrays.copyOf(key, 8));
-      if (first) {
-        prevBlockNumber = blockNumber;
-        first = false;
-      }
       long timestamp = Longs.fromByteArray(Arrays.copyOfRange(key, 8, 16));
       if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS * 2) {
         break;
       }
       checkPointV2Store.delete(key);
       if (prevBlockNumber != blockNumber) {
-        logger.info("checkpoint prune, number: {}", prevBlockNumber);
+        logger.info("checkpoint prune start, number: {}", prevBlockNumber);
       }
       prevBlockNumber = blockNumber;
     }
