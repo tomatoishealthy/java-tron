@@ -546,7 +546,7 @@ public class SnapshotManager implements RevokingDatabase {
       }
       checkPointV2Store.delete(key);
       if (prevBlockNumber != blockNumber) {
-        logger.info("checkpoint prune start, number: {}", prevBlockNumber);
+        logger.info("checkpoint prune start, number: {}", blockNumber);
       }
       prevBlockNumber = blockNumber;
     }
