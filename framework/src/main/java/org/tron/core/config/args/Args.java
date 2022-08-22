@@ -414,9 +414,6 @@ public class Args extends CommonParameter {
     PARAMETER.storage
         .setCheckpointSync(Storage.getCheckpointSyncFromConfig(config));
 
-    PARAMETER.storage
-        .setCheckpointReserve(Storage.getCheckpointReserveFromConfig(config));
-
     PARAMETER.storage.setDefaultDbOptions(config);
     PARAMETER.storage.setPropertyMapFromConfig(config);
 

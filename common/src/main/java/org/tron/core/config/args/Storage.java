@@ -69,7 +69,6 @@ public class Storage {
 
   private static final String CHECKPOINT_VERSION_KEY = "storage.checkpoint.version";
   private static final String CHECKPOINT_SYNC_KEY = "storage.checkpoint.sync";
-  private static final String CHECKPOINT_RESERVE_KEY = "storage.checkpoint.reserve";
 
   /**
    * Default values of directory
@@ -83,7 +82,6 @@ public class Storage {
   private static final String DEFAULT_INDEX_SWITCH = "on";
   private static final int DEFAULT_CHECKPOINT_VERSION = 1;
   private static final boolean DEFAULT_CHECKPOINT_SYNC = true;
-  private static final long DEFAULT_CHECKPOINT_RESERVE = 100;
   private Config storage;
 
   /**
@@ -131,10 +129,6 @@ public class Storage {
   @Getter
   @Setter
   private boolean checkpointSync;
-
-  @Getter
-  @Setter
-  private long checkpointReserve;
 
   private Options defaultDbOptions;
 
@@ -197,12 +191,6 @@ public class Storage {
     return config.hasPath(CHECKPOINT_SYNC_KEY)
         ? config.getBoolean(CHECKPOINT_SYNC_KEY)
         : DEFAULT_CHECKPOINT_SYNC;
-  }
-
-  public static long getCheckpointReserveFromConfig(final Config config) {
-    return config.hasPath(CHECKPOINT_RESERVE_KEY)
-        ? config.getLong(CHECKPOINT_RESERVE_KEY)
-        : DEFAULT_CHECKPOINT_RESERVE;
   }
 
   private  Property createProperty(final ConfigObject conf) {

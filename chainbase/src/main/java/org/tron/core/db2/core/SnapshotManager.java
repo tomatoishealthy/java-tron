@@ -1,7 +1,5 @@
 package org.tron.core.db2.core;
 
-import static org.tron.common.utils.Commons.CURRENT_FLUSHED_BLOCK_NUM_KEY;
-
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
@@ -95,7 +93,6 @@ public class SnapshotManager implements RevokingDatabase {
   private long currentBlockNum = -1;
 
   private int checkpointVersion = 2;   // default v2
-  private long checkpointReserve = 10;  // default 10
 
   public SnapshotManager(String checkpointPath) {
   }
@@ -103,7 +100,6 @@ public class SnapshotManager implements RevokingDatabase {
   @PostConstruct
   public void init() {
     checkpointVersion = CommonParameter.getInstance().getStorage().getCheckpointVersion();
-    checkpointReserve = CommonParameter.getInstance().getStorage().getCheckpointReserve();
     // prune checkpoint
     pruneCheckpointThread.scheduleWithFixedDelay(() -> {
       try {
@@ -113,7 +109,7 @@ public class SnapshotManager implements RevokingDatabase {
       } catch (Throwable t) {
         logger.error("Exception in prune checkpoint", t);
       }
-    }, 60000, 3600, TimeUnit.MILLISECONDS);
+    }, 300000, 3600, TimeUnit.MILLISECONDS);
 
 
     exitThread =  new Thread(() -> {
@@ -359,17 +355,17 @@ public class SnapshotManager implements RevokingDatabase {
               MetricKeys.Histogram.DB_FLUSH, "delete");
           deleteCheckpoint();
           Metrics.histogramObserve(requestTimer);
-
-          Histogram.Timer createTimer = Metrics.histogramStartTimer(
-              MetricKeys.Histogram.DB_FLUSH, "create");
-          createCheckpoint();
-          Metrics.histogramObserve(createTimer);
-        } else {
-          Histogram.Timer createV2 = Metrics.histogramStartTimer(
-              MetricKeys.Histogram.DB_FLUSH, "create2");
-          createCheckpointV2();
-          Metrics.histogramObserve(createV2);
         }
+        Histogram.Timer createTimer = Metrics.histogramStartTimer(
+            MetricKeys.Histogram.DB_FLUSH, "create");
+        createCheckpoint();
+        Metrics.histogramObserve(createTimer);
+//        } else {
+//          Histogram.Timer createV2 = Metrics.histogramStartTimer(
+//              MetricKeys.Histogram.DB_FLUSH, "create2");
+//          createCheckpointV2();
+//          Metrics.histogramObserve(createV2);
+//        }
         long checkPointEnd = System.currentTimeMillis();
         refresh();
         flushCount = 0;
@@ -406,16 +402,33 @@ public class SnapshotManager implements RevokingDatabase {
             Value v = e.getValue();
             batch.put(WrappedByteArray.of(Bytes.concat(simpleEncode(dbName), k.getBytes())),
                 WrappedByteArray.of(v.encode()));
+            if (isV2Open() && db.getDbName().equals("block")) {
+              currentBlockNum = new BlockCapsule(v.getBytes()).getNum();
+            }
           }
         }
       }
 
-      checkTmpStore.getDbSource().updateByBatch(batch.entrySet().stream()
-              .map(e -> Maps.immutableEntry(e.getKey().getBytes(), e.getValue().getBytes()))
-              .collect(HashMap::new, (m, k) -> m.put(k.getKey(), k.getValue()), HashMap::putAll),
-          WriteOptionsWrapper.getInstance().sync(CommonParameter
-              .getInstance().getStorage().isDbSync()));
-
+      if (isV2Open()) {
+        if (currentBlockNum < 0) {
+          logger.error("create checkpoint failed, currentBlockNum: {}", currentBlockNum);
+          System.exit(-1);
+        }
+        byte[] now  = Longs.toByteArray(System.currentTimeMillis());
+        checkPointV2Store.getDbSource().updateByBatch(batch.entrySet().stream()
+                .map(e -> Maps.immutableEntry(
+                    Bytes.concat(Longs.toByteArray(currentBlockNum), now, e.getKey().getBytes()),
+                    e.getValue().getBytes()))
+                .collect(HashMap::new, (m, k) -> m.put(k.getKey(), k.getValue()), HashMap::putAll),
+            WriteOptionsWrapper.getInstance().sync(CommonParameter
+                .getInstance().getStorage().isDbSync()));
+      } else {
+        checkTmpStore.getDbSource().updateByBatch(batch.entrySet().stream()
+                .map(e -> Maps.immutableEntry(e.getKey().getBytes(), e.getValue().getBytes()))
+                .collect(HashMap::new, (m, k) -> m.put(k.getKey(), k.getValue()), HashMap::putAll),
+            WriteOptionsWrapper.getInstance().sync(CommonParameter
+                .getInstance().getStorage().isDbSync()));
+      }
     } catch ( Exception e) {
       throw new TronDBException(e);
     }
@@ -423,7 +436,7 @@ public class SnapshotManager implements RevokingDatabase {
 
   private void createCheckpointV2() {
     try {
-      CheckpointOuterClass.Checkpoint.Builder cp = CheckpointOuterClass.Checkpoint.newBuilder();
+      Map<WrappedByteArray, WrappedByteArray> batch = new HashMap<>();
       for (Chainbase db : dbs) {
         Snapshot head = db.getHead();
         if (Snapshot.isRoot(head)) {
@@ -439,28 +452,66 @@ public class SnapshotManager implements RevokingDatabase {
           for (Map.Entry<Key, Value> e : keyValueDB) {
             Key k = e.getKey();
             Value v = e.getValue();
-            cp.putEntry(
-                ByteArray.toHexString(Bytes.concat(simpleEncode(dbName), k.getBytes())),
-                ByteString.copyFrom(v.encode()));
+            batch.put(WrappedByteArray.of(Bytes.concat(simpleEncode(dbName), k.getBytes())),
+                WrappedByteArray.of(v.encode()));
             if (db.getDbName().equals("block")) {
               currentBlockNum = new BlockCapsule(v.getBytes()).getNum();
             }
           }
         }
       }
-      if (currentBlockNum == -1) {
-        throw new TronDBException("create checkpoint failed, block num should not be -1");
-      }
-      checkPointV2Store.getDbSource().putWithOption(
-          Bytes.concat(Longs.toByteArray(currentBlockNum),
-              Longs.toByteArray(System.currentTimeMillis())),
-          cp.build().toByteArray(),
-          WriteOptionsWrapper.getInstance().sync(true));
 
-      logger.info("create checkpoint success, number: {}", currentBlockNum);
+      checkTmpStore.getDbSource().updateByBatch(batch.entrySet().stream()
+              .map(e -> Maps.immutableEntry(
+                  Bytes.concat(Longs.toByteArray(currentBlockNum), e.getKey().getBytes()),
+                  e.getValue().getBytes()))
+              .collect(HashMap::new, (m, k) -> m.put(k.getKey(), k.getValue()), HashMap::putAll),
+          WriteOptionsWrapper.getInstance().sync(CommonParameter
+              .getInstance().getStorage().isDbSync()));
+
     } catch ( Exception e) {
       throw new TronDBException(e);
     }
+
+//    try {
+//      CheckpointOuterClass.Checkpoint.Builder cp = CheckpointOuterClass.Checkpoint.newBuilder();
+//      for (Chainbase db : dbs) {
+//        Snapshot head = db.getHead();
+//        if (Snapshot.isRoot(head)) {
+//          return;
+//        }
+//
+//        String dbName = db.getDbName();
+//        Snapshot next = head.getRoot();
+//        for (int i = 0; i < flushCount; ++i) {
+//          next = next.getNext();
+//          SnapshotImpl snapshot = (SnapshotImpl) next;
+//          DB<Key, Value> keyValueDB = snapshot.getDb();
+//          for (Map.Entry<Key, Value> e : keyValueDB) {
+//            Key k = e.getKey();
+//            Value v = e.getValue();
+//            cp.putEntry(
+//                ByteArray.toHexString(Bytes.concat(simpleEncode(dbName), k.getBytes())),
+//                ByteString.copyFrom(v.encode()));
+//            if (db.getDbName().equals("block")) {
+//              currentBlockNum = new BlockCapsule(v.getBytes()).getNum();
+//            }
+//          }
+//        }
+//      }
+//      if (currentBlockNum == -1) {
+//        throw new TronDBException("create checkpoint failed, block num should not be -1");
+//      }
+//      checkPointV2Store.getDbSource().putWithOption(
+//          Bytes.concat(Longs.toByteArray(currentBlockNum),
+//              Longs.toByteArray(System.currentTimeMillis())),
+//          cp.build().toByteArray(),
+//          WriteOptionsWrapper.getInstance().sync(true));
+//
+//      logger.info("create checkpoint success, number: {}", currentBlockNum);
+//    } catch ( Exception e) {
+//      throw new TronDBException(e);
+//    }
   }
 
   private void deleteCheckpoint() {
@@ -483,24 +534,25 @@ public class SnapshotManager implements RevokingDatabase {
     if (unChecked) {
       return;
     }
-    long dropCount = checkPointV2Store.getDbSource().allKeys().size() - checkpointReserve;
-    if (dropCount <= 0) {
-      return;
-    }
+    long prevBlockNumber = -1;
+    boolean first = true;
     for (Map.Entry<byte[], byte[]> entry: checkPointV2Store.getDbSource()) {
       byte[] key = entry.getKey();
       long blockNumber = Longs.fromByteArray(Arrays.copyOf(key, 8));
+      if (first) {
+        prevBlockNumber = blockNumber;
+        first = false;
+      }
       long timestamp = Longs.fromByteArray(Arrays.copyOfRange(key, 8, 16));
       if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS * 2) {
         break;
       }
       checkPointV2Store.delete(key);
-      logger.info("checkpoint prune, number: {}", blockNumber);
-      if (--dropCount == 0) {
-        break;
+      if (prevBlockNumber != blockNumber) {
+        logger.info("checkpoint prune, number: {}", prevBlockNumber);
       }
+      prevBlockNumber = blockNumber;
     }
-   // checkPointV2Store.compact(null, null);
   }
 
   // ensure run this method first after process start.
@@ -567,87 +619,45 @@ public class SnapshotManager implements RevokingDatabase {
       return;
     }
 
-//    long minBlockNum = Long.MAX_VALUE, maxBlockNum = -1;
-//    for (Chainbase db : dbs) {
-//      if (!Snapshot.isRoot(db.getHead())) {
-//        throw new IllegalStateException("first check.");
-//      }
-////      if (db.getDbName().equals("market_pair_price_to_order")
-////          || db.getDbName().equals("witness")
-////          || db.getDbName().equals("votes")
-////          || db.getDbName().equals("witness_schedule")) {
-////        continue;
-////      }
-//      try {
-//        long blockNumber = Longs.fromByteArray(db.get(CURRENT_FLUSHED_BLOCK_NUM_KEY));
-//        logger.info("store: {}, block numer: {}", db.getDbName(), blockNumber);
-//        minBlockNum = Math.min(minBlockNum, blockNumber);
-//        maxBlockNum = Math.max(maxBlockNum, blockNumber);
-//      } catch (ItemNotFoundException e) {
-//        logger.error("check failed, dbs meta data corrupt, can not get current block number");
-//        System.exit(-1);
-//      }
-//    }
-//
-//    if (minBlockNum == Long.MAX_VALUE || maxBlockNum == -1) {
-//      logger.error("check failed, dbs current block number illegal");
-//      System.exit(-1);
-//    }
-//
-//    List<Long> sortedAllKeys = allKeys.stream().map(Longs::fromByteArray).sorted().collect(Collectors.toList());
-//    if (minBlockNum < sortedAllKeys.get(0) || maxBlockNum > sortedAllKeys.get(sortedAllKeys.size()-1)) {
-//      logger.error("check failed, checkpoint incomplete，checkpoint start number: {}, end number: {}, " +
-//              "dbs start number: {}, end number: {}",
-//          sortedAllKeys.get(0), sortedAllKeys.get(sortedAllKeys.size()-1), minBlockNum, maxBlockNum);
-//      System.exit(-1);
-//    }
-
     Map<String, Chainbase> dbMap = dbs.stream()
         .map(db -> Maps.immutableEntry(db.getDbName(), db))
         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    advance();
 
-    long currentBlockNum = -1;
-    for (Map.Entry<byte[], byte[]> i: checkPointV2Store.getDbSource()) {
-      advance();
-      currentBlockNum = Longs.fromByteArray(Arrays.copyOfRange(i.getKey(), 0, 8));
-      if (currentBlockNum < 0) {
-        logger.error("checkpoint data corrupt, currentBlockNum: {}", currentBlockNum);
+    long beginBlockNumber = -1, endBlockNumber = -1;
+    boolean first = true;
+    for (Map.Entry<byte[], byte[]> e: checkPointV2Store.getDbSource()) {
+      byte[] k = e.getKey();
+      byte[] key = Arrays.copyOfRange(k, 16, k.length);
+      byte[] value = e.getValue();
+      if (first) {
+        beginBlockNumber = Longs.fromByteArray(Arrays.copyOfRange(k, 0, 8));
+        first = false;
+      }
+      endBlockNumber =Longs.fromByteArray(Arrays.copyOfRange(k, 0, 8));
+      if (endBlockNumber == -1) {
+        logger.error("checkpoint recover failed, checkpoint illegal, blocknumber can't be -1");
         System.exit(-1);
       }
-      byte[] batch = i.getValue();
-      CheckpointOuterClass.Checkpoint cp = null;
-      try {
-        cp = CheckpointOuterClass.Checkpoint.parseFrom(batch);
-      } catch (InvalidProtocolBufferException invalidProtocolBufferException) {
-        logger.error("checkpoint: parse failed, err: {}", invalidProtocolBufferException.getMessage());
-        System.exit(-1);
+      String db = simpleDecode(key);
+      if (dbMap.get(db) == null) {
+        continue;
       }
-      cp.getEntryMap().forEach(
-          (k, v) -> {
-            byte[] key = ByteArray.fromHexString(k);
-            byte[] value = v.toByteArray();
-            String db = simpleDecode(key);
+      byte[] realKey = Arrays.copyOfRange(key, db.getBytes().length + 4, key.length);
+      byte[] realValue = value.length == 1 ? null : Arrays.copyOfRange(value, 1, value.length);
+      if (realValue != null) {
+        dbMap.get(db).getHead().put(realKey, realValue);
+      } else {
+        dbMap.get(db).getHead().remove(realKey);
+      }
 
-            if (dbMap.get(db) == null) {
-              //continue;
-              return;
-            }
-            byte[] realKey = Arrays.copyOfRange(key, db.getBytes().length + 4, key.length);
-            byte[] realValue = value.length == 1 ? null : Arrays.copyOfRange(value, 1, value.length);
-            if (realValue != null) {
-              dbMap.get(db).getHead().put(realKey, realValue);
-            } else {
-              dbMap.get(db).getHead().remove(realKey);
-            }
-          }
-      );
-      dbs.forEach(db -> db.getHead().getRoot().merge(db.getHead()));
-      retreat();
-      logger.info("checkpoint: fill up with block number: {}", currentBlockNum);
     }
 
+    dbs.forEach(db -> db.getHead().getRoot().merge(db.getHead()));
+    retreat();
+
     unChecked = false;
-    logger.info("checkpoint recover success, block height: {}", currentBlockNum);
+    logger.info("checkpoint recover success, block range from:{}, to: {}", beginBlockNumber, endBlockNumber);
 
     //System.exit(-1);
   }
