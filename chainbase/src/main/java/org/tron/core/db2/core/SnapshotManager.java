@@ -535,6 +535,7 @@ public class SnapshotManager implements RevokingDatabase {
       return;
     }
     long prevBlockNumber = -1;
+    Map<byte[], byte[]> hmap = new HashMap<>();
     for (Map.Entry<byte[], byte[]> entry: checkPointV2Store.getDbSource()) {
       byte[] key = entry.getKey();
       long blockNumber = Longs.fromByteArray(Arrays.copyOf(key, 8));
@@ -542,14 +543,18 @@ public class SnapshotManager implements RevokingDatabase {
       if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS * 2) {
         break;
       }
-      checkPointV2Store.delete(key);
       if (prevBlockNumber != blockNumber) {
+        if (hmap.size() != 0) {
+          checkPointV2Store.updateByBatch(hmap);
+          hmap.clear();
+        }
         logger.info("checkpoint prune start, number: {}", blockNumber);
       }
+      hmap.put(key, null);
       prevBlockNumber = blockNumber;
     }
-    checkPointV2Store.compact(null, null);
-    checkPointV2Store.compact(null, null);
+//    checkPointV2Store.compact(null, null);
+//    checkPointV2Store.compact(null, null);
   }
 
   // ensure run this method first after process start.
