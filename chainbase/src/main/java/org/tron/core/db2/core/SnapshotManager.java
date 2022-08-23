@@ -494,7 +494,7 @@ public class SnapshotManager implements RevokingDatabase {
       if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS * 2) {
         break;
       }
-      checkPointV2Store.delete(key);
+      checkPointV2Store.getDbSource().putData(key, null);
       logger.info("checkpoint prune, number: {}", blockNumber);
       if (--dropCount == 0) {
         break;
