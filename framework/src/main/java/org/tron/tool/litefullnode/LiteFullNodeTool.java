@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
@@ -47,6 +48,7 @@ public class LiteFullNodeTool {
   private static final String INFO_FILE_NAME = "info.properties";
   private static final String BACKUP_DIR_PREFIX = ".bak_";
   private static final String CHECKPOINT_DB = "tmp";
+  private static final String CHECKPOINT_DB_V2 = "checkpoint";
   private static final long VM_NEED_RECENT_BLKS = 256;
 
   private static final String BLOCK_DB_NAME = "block";
@@ -218,20 +220,43 @@ public class LiteFullNodeTool {
   private void mergeCheckpoint(String sourceDir, String destDir, List<String> destDbs) {
     logger.info("-- begin to merge checkpoint to dataset");
     try {
-      DBInterface tmpDb = DbTool.getDB(sourceDir, CHECKPOINT_DB);
-      try (DBIterator iterator = tmpDb.iterator()) {
-        for (iterator.seekToFirst(); iterator.hasNext(); iterator.next()) {
-          byte[] key = iterator.getKey();
-          byte[] value = iterator.getValue();
-          String dbName = SnapshotManager.simpleDecode(key);
-          byte[] realKey = Arrays.copyOfRange(key, dbName.getBytes().length + 4, key.length);
-          byte[] realValue = value.length == 1 ? null : Arrays.copyOfRange(value, 1, value.length);
-          if (destDbs != null && destDbs.contains(dbName)) {
-            DBInterface destDb = DbTool.getDB(destDir, dbName);
-            if (realValue != null) {
-              destDb.put(realKey, realValue);
-            } else {
-              destDb.delete(realKey);
+      int cpVersion = getCheckpointVersion(sourceDir);
+      if (cpVersion == 2) {
+        DBInterface checkpointDb = DbTool.getDB(sourceDir, CHECKPOINT_DB_V2);
+        try (DBIterator iterator = checkpointDb.iterator()) {
+          for (iterator.seekToFirst(); iterator.hasNext(); iterator.next()) {
+            byte[] k = iterator.getKey();
+            byte[] key = Arrays.copyOfRange(k, 16, k.length);
+            byte[] value = iterator.getValue();
+            String dbName = SnapshotManager.simpleDecode(key);
+            byte[] realKey = Arrays.copyOfRange(key, dbName.getBytes().length + 4, key.length);
+            byte[] realValue = value.length == 1 ? null : Arrays.copyOfRange(value, 1, value.length);
+            if (destDbs != null && destDbs.contains(dbName)) {
+              DBInterface destDb = DbTool.getDB(destDir, dbName);
+              if (realValue != null) {
+                destDb.put(realKey, realValue);
+              } else {
+                destDb.delete(realKey);
+              }
+            }
+          }
+        }
+      } else {
+        DBInterface tmpDb = DbTool.getDB(sourceDir, CHECKPOINT_DB);
+        try (DBIterator iterator = tmpDb.iterator()) {
+          for (iterator.seekToFirst(); iterator.hasNext(); iterator.next()) {
+            byte[] key = iterator.getKey();
+            byte[] value = iterator.getValue();
+            String dbName = SnapshotManager.simpleDecode(key);
+            byte[] realKey = Arrays.copyOfRange(key, dbName.getBytes().length + 4, key.length);
+            byte[] realValue = value.length == 1 ? null : Arrays.copyOfRange(value, 1, value.length);
+            if (destDbs != null && destDbs.contains(dbName)) {
+              DBInterface destDb = DbTool.getDB(destDir, dbName);
+              if (realValue != null) {
+                destDb.put(realKey, realValue);
+              } else {
+                destDb.delete(realKey);
+              }
             }
           }
         }
@@ -256,7 +281,16 @@ public class LiteFullNodeTool {
   private long getLatestBlockHeaderNum(String databaseDir) throws IOException, RocksDBException {
     // query latest_block_header_number from checkpoint first
     final String latestBlockHeaderNumber = "latest_block_header_number";
-    byte[] value = DbTool.getDB(databaseDir, CHECKPOINT_DB).get(
+    int cpVersion = getCheckpointVersion(databaseDir);
+    byte[] value = null;
+    if (cpVersion == 2) {
+      DBInterface checkpointDb = DbTool.getDB(databaseDir, CHECKPOINT_DB);
+      try(DBIterator iterator = checkpointDb.iterator()) {
+        iterator.seekToFirst();
+      }
+
+    }
+    value = DbTool.getDB(databaseDir, CHECKPOINT_DB).get(
             Bytes.concat(simpleEncode(CHECKPOINT_DB), latestBlockHeaderNumber.getBytes()));
     if (value != null && value.length > 1) {
       return ByteArray.toLong(Arrays.copyOfRange(value, 1, value.length));
@@ -489,6 +523,17 @@ public class LiteFullNodeTool {
   private void deleteSnapshotFlag(String databaseDir) throws IOException {
     logger.info("-- delete the info file to identify this node is a real fullnode.");
     Files.delete(Paths.get(databaseDir, INFO_FILE_NAME));
+  }
+
+  private int getCheckpointVersion(String sourceDir) throws IOException, RocksDBException {
+    if (!Files.exists(Paths.get(sourceDir, CHECKPOINT_DB_V2))) {
+      return 1;
+    }
+    DBInterface sourceDb = DbTool.getDB(sourceDir, CHECKPOINT_DB_V2);
+    if (sourceDb.size() > 0) {
+      return 2;
+    }
+    return 1;
   }
 
   private void run(Args argv) {
