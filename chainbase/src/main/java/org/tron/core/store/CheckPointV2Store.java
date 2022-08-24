@@ -2,8 +2,6 @@ package org.tron.core.store;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
 import org.tron.common.storage.WriteOptionsWrapper;
 import org.tron.core.db.TronDatabase;
 import org.tron.core.exception.BadItemException;
@@ -12,12 +10,11 @@ import org.tron.core.exception.ItemNotFoundException;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 
-@Component
 public class CheckPointV2Store extends TronDatabase<byte[]> {
 
   @Autowired
-  public CheckPointV2Store(ApplicationContext ctx) {
-    super("checkpoint");
+  public CheckPointV2Store(String dbPath) {
+    super(dbPath);
   }
 
 //  @Override
