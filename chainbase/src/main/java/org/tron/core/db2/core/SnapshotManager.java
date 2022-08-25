@@ -508,7 +508,7 @@ public class SnapshotManager implements RevokingDatabase {
     if (cpList.size() < 3) {
       return;
     }
-    for (String cp: cpList) {
+    for (String cp: cpList.subList(0,3)) {
       long timestamp = Long.parseLong(cp.split("_")[0]);
       long blockNumber = Long.parseLong(cp.split("_")[1]);
       if (System.currentTimeMillis() - timestamp < ONE_MINUTE_MILLS*2) {
