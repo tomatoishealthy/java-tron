@@ -3,6 +3,7 @@ package org.tron.core.db2.core;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -322,6 +323,13 @@ public class SnapshotManager implements RevokingDatabase {
       next = next.getNext();
       snapshots.add(next);
     }
+    if (!db.getDbName().equals("market_pair_price_to_order")
+        && !db.getDbName().equals("witness")
+        && !db.getDbName().equals("votes")
+        && !db.getDbName().equals("recent-transaction")
+        && !db.getDbName().equals("witness_schedule")) {
+         next.put("blocknumber".getBytes(), Longs.toByteArray(currentBlockNum));
+    }
 
     root.merge(snapshots);
 
@@ -568,6 +576,34 @@ public class SnapshotManager implements RevokingDatabase {
       deleteCheckpoint();
       return;
     }
+    long max = -1;
+    long min = Long.MAX_VALUE;
+    for (Chainbase db : dbs) {
+      if (!Snapshot.isRoot(db.getHead())) {
+        throw new IllegalStateException("first check.1");
+      }
+      if (!db.getDbName().equals("market_pair_price_to_order")
+          && !db.getDbName().equals("witness")
+          && !db.getDbName().equals("votes")
+          && !db.getDbName().equals("recent-transaction")
+          && !db.getDbName().equals("witness_schedule")) {
+        byte[] value = db.getUnchecked("blocknumber".getBytes());
+        long num = -1;
+        if (value != null) {
+          num = Longs.fromByteArray(value);
+        }
+        max = Math.max(max, num);
+        min = Math.min(min, num);
+        logger.info("DB check, name: {}, num: {}", db.getDbName(), num);
+      }
+    }
+    long start = Long.parseLong(cpList.get(0).split("_")[1]);
+    long end = Long.parseLong(cpList.get(cpList.size()-1).split("_")[1]);
+    if (start > min || end < max) {
+      logger.error("DB check failed, start: {}, end: {}, max: {}, min: {}", start, end, max, min);
+      System.exit(-1);
+    }
+
 
     Map<String, Chainbase> dbMap = dbs.stream()
         .map(db -> Maps.immutableEntry(db.getDbName(), db))
