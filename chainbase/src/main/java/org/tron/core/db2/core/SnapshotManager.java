@@ -326,6 +326,7 @@ public class SnapshotManager implements RevokingDatabase {
     if (!db.getDbName().equals("market_pair_price_to_order")
         && !db.getDbName().equals("witness")
         && !db.getDbName().equals("votes")
+        && !db.getDbName().equals("trans-cache")
         && !db.getDbName().equals("recent-transaction")
         && !db.getDbName().equals("witness_schedule")) {
          next.put("blocknumber".getBytes(), Longs.toByteArray(currentBlockNum));
@@ -585,6 +586,7 @@ public class SnapshotManager implements RevokingDatabase {
       if (!db.getDbName().equals("market_pair_price_to_order")
           && !db.getDbName().equals("witness")
           && !db.getDbName().equals("votes")
+          && !db.getDbName().equals("trans-cache")
           && !db.getDbName().equals("recent-transaction")
           && !db.getDbName().equals("witness_schedule")) {
         byte[] value = db.getUnchecked("blocknumber".getBytes());
