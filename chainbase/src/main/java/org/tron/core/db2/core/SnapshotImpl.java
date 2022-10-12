@@ -12,12 +12,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import org.tron.core.db2.common.HashDB;
 import org.tron.core.db2.common.Key;
 import org.tron.core.db2.common.Value;
 import org.tron.core.db2.common.Value.Operator;
 import org.tron.core.db2.common.WrappedByteArray;
 
+@Slf4j
 public class SnapshotImpl extends AbstractSnapshot<Key, Value> {
 
   @Getter
@@ -48,21 +50,29 @@ public class SnapshotImpl extends AbstractSnapshot<Key, Value> {
   }
 
   private byte[] get(Snapshot head, byte[] key) {
+    long start = System.nanoTime();
     Snapshot snapshot = head;
     Value value;
     if (isOptimized) {
       value = db.get(Key.of(key));
       return value == null ? null: value.getBytes();
     }
+    int count = 0;
     while (Snapshot.isImpl(snapshot)) {
+      count ++;
       if ((value = ((SnapshotImpl) snapshot).db.get(Key.of(key))) != null) {
+        long end = System.nanoTime();
+        logger.info("snapshot impl query cost, db: {}, deep: {}, cost: {}", this.getDbName(), count, (end-start));
         return value.getBytes();
       }
 
       snapshot = snapshot.getPrevious();
     }
-
-    return snapshot == null ? null : snapshot.get(key);
+    long end = System.nanoTime();
+    logger.info("snapshot impl total query cost, db: {}, deep: {}, cost: {}", this.getDbName(), count, (end-start));
+    byte[] result = snapshot == null ? null : snapshot.get(key);
+    logger.info("snapshot root query cost, db: {}, deep: {}, cost: {}", this.getDbName(), count, (System.nanoTime()-end));
+    return result;
   }
 
   @Override
