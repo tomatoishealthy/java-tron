@@ -71,7 +71,7 @@ public class SnapshotImpl extends AbstractSnapshot<Key, Value> {
     long end = System.nanoTime();
     logger.info("snapshot impl total query cost, db: {}, deep: {}, cost: {}", this.getDbName(), count, (end-start));
     byte[] result = snapshot == null ? null : snapshot.get(key);
-    logger.info("snapshot root query cost, db: {}, deep: {}, cost: {}", this.getDbName(), count, (System.nanoTime()-end));
+    logger.info("snapshot root query cost, db: {}, deep: {}, cost: {}", this.getDbName(), count, (System.nanoTime()-start));
     return result;
   }
 
