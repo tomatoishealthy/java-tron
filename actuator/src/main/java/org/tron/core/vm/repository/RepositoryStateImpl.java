@@ -2,11 +2,13 @@ package org.tron.core.vm.repository;
 
 import static java.lang.Long.max;
 import static org.tron.core.config.Parameter.ChainConstant.BLOCK_PRODUCED_INTERVAL;
+import static org.tron.core.config.Parameter.ChainConstant.TRX_PRECISION;
 
 import com.google.protobuf.ByteString;
 import java.util.HashMap;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.bouncycastle.util.Strings;
 import org.bouncycastle.util.encoders.Hex;
 import org.tron.common.crypto.Hash;
@@ -18,17 +20,8 @@ import org.tron.common.utils.Sha256Hash;
 import org.tron.common.utils.StorageUtils;
 import org.tron.common.utils.StringUtil;
 import org.tron.core.ChainBaseManager;
-import org.tron.core.capsule.AbiCapsule;
-import org.tron.core.capsule.AccountCapsule;
-import org.tron.core.capsule.AssetIssueCapsule;
-import org.tron.core.capsule.BlockCapsule;
+import org.tron.core.capsule.*;
 import org.tron.core.capsule.BlockCapsule.BlockId;
-import org.tron.core.capsule.BytesCapsule;
-import org.tron.core.capsule.CodeCapsule;
-import org.tron.core.capsule.ContractCapsule;
-import org.tron.core.capsule.DelegatedResourceCapsule;
-import org.tron.core.capsule.VotesCapsule;
-import org.tron.core.capsule.WitnessCapsule;
 import org.tron.core.config.Parameter;
 import org.tron.core.db.BlockIndexStore;
 import org.tron.core.db.BlockStore;
@@ -37,19 +30,7 @@ import org.tron.core.db.TransactionTrace;
 import org.tron.core.exception.ItemNotFoundException;
 import org.tron.core.exception.StoreException;
 import org.tron.core.state.WorldStateQueryInstance;
-import org.tron.core.store.AbiStore;
-import org.tron.core.store.AccountStore;
-import org.tron.core.store.AssetIssueStore;
-import org.tron.core.store.AssetIssueV2Store;
-import org.tron.core.store.CodeStore;
-import org.tron.core.store.ContractStore;
-import org.tron.core.store.DelegatedResourceStore;
-import org.tron.core.store.DelegationStore;
-import org.tron.core.store.DynamicPropertiesStore;
-import org.tron.core.store.StorageRowStore;
-import org.tron.core.store.StoreFactory;
-import org.tron.core.store.VotesStore;
-import org.tron.core.store.WitnessStore;
+import org.tron.core.store.*;
 import org.tron.core.vm.config.VMConfig;
 import org.tron.core.vm.program.Program.IllegalOperationException;
 import org.tron.core.vm.program.Storage;
@@ -59,6 +40,8 @@ import org.tron.protos.Protocol.AccountType;
 import org.tron.protos.Protocol.DelegatedResource;
 import org.tron.protos.Protocol.Votes;
 import org.tron.protos.contract.AssetIssueContractOuterClass.AssetIssueContract;
+import org.tron.protos.contract.Common;
+import org.tron.protos.contract.SmartContractOuterClass;
 import org.tron.protos.contract.SmartContractOuterClass.SmartContract;
 
 @Slf4j(topic = "Repository")
@@ -69,6 +52,7 @@ public class RepositoryStateImpl implements Repository {
       / BLOCK_PRODUCED_INTERVAL;
   private static final byte[] TOTAL_NET_WEIGHT = "TOTAL_NET_WEIGHT".getBytes();
   private static final byte[] TOTAL_ENERGY_WEIGHT = "TOTAL_ENERGY_WEIGHT".getBytes();
+  private static final byte[] TOTAL_TRON_POWER_WEIGHT = "TOTAL_TRON_POWER_WEIGHT".getBytes();
 
   private byte[] rootHash;
   private StoreFactory storeFactory;
@@ -90,6 +74,8 @@ public class RepositoryStateImpl implements Repository {
   @Getter
   private ContractStore contractStore;
   @Getter
+  private ContractStateStore contractStateStore;
+  @Getter
   private StorageRowStore storageRowStore;
   @Getter
   private BlockStore blockStore;
@@ -105,12 +91,16 @@ public class RepositoryStateImpl implements Repository {
   private VotesStore votesStore;
   @Getter
   private DelegationStore delegationStore;
+  @Getter
+  private DelegatedResourceAccountIndexStore delegatedResourceAccountIndexStore;
 
   private Repository parent = null;
 
   private final HashMap<Key, Value<Account>> accountCache = new HashMap<>();
   private final HashMap<Key, Value<byte[]>> codeCache = new HashMap<>();
   private final HashMap<Key, Value<SmartContract>> contractCache = new HashMap<>();
+  private final HashMap<Key, Value<SmartContractOuterClass.ContractState>> contractStateCache
+      = new HashMap<>();
   private final HashMap<Key, Storage> storageCache = new HashMap<>();
 
   private final HashMap<Key, Value<AssetIssueContract>> assetIssueCache = new HashMap<>();
@@ -118,6 +108,7 @@ public class RepositoryStateImpl implements Repository {
   private final HashMap<Key, Value<DelegatedResource>> delegatedResourceCache = new HashMap<>();
   private final HashMap<Key, Value<Votes>> votesCache = new HashMap<>();
   private final HashMap<Key, Value<byte[]>> delegationCache = new HashMap<>();
+  private final HashMap<Key, Value<Protocol.DelegatedResourceAccountIndex>> delegatedResourceAccountIndexCache = new HashMap<>();
 
   public static void removeLruCache(byte[] address) {
   }
@@ -141,6 +132,7 @@ public class RepositoryStateImpl implements Repository {
       abiStore = manager.getAbiStore();
       codeStore = manager.getCodeStore();
       contractStore = manager.getContractStore();
+      contractStateStore = manager.getContractStateStore();
       assetIssueStore = manager.getAssetIssueStore();
       assetIssueV2Store = manager.getAssetIssueV2Store();
       storageRowStore = manager.getStorageRowStore();
@@ -151,6 +143,7 @@ public class RepositoryStateImpl implements Repository {
       delegatedResourceStore = manager.getDelegatedResourceStore();
       votesStore = manager.getVotesStore();
       delegationStore = manager.getDelegationStore();
+      delegatedResourceAccountIndexStore = manager.getDelegatedResourceAccountIndexStore();
     }
     this.parent = parent;
   }
@@ -168,9 +161,70 @@ public class RepositoryStateImpl implements Repository {
     long latestConsumeTime = accountCapsule.getAccountResource().getLatestConsumeTimeForEnergy();
     long energyLimit = calculateGlobalEnergyLimit(accountCapsule);
 
-    long newEnergyUsage = increase(energyUsage, 0, latestConsumeTime, now);
+    long windowSize = accountCapsule.getWindowSize(Common.ResourceCode.ENERGY);
+
+    long newEnergyUsage = recover(energyUsage, latestConsumeTime, now, windowSize);
 
     return max(energyLimit - newEnergyUsage, 0); // us
+  }
+
+  @Override
+  public long getAccountEnergyUsage(AccountCapsule accountCapsule) {
+    long now = getHeadSlot();
+    long energyUsage = accountCapsule.getEnergyUsage();
+    long latestConsumeTime = accountCapsule.getAccountResource().getLatestConsumeTimeForEnergy();
+
+    long accountWindowSize = accountCapsule.getWindowSize(Common.ResourceCode.ENERGY);
+
+    return recover(energyUsage, latestConsumeTime, now, accountWindowSize);
+  }
+
+  @Override
+  public Pair<Long, Long> getAccountEnergyUsageBalanceAndRestoreSeconds(AccountCapsule accountCapsule) {
+    long now = getHeadSlot();
+
+    long energyUsage = accountCapsule.getEnergyUsage();
+    long latestConsumeTime = accountCapsule.getAccountResource().getLatestConsumeTimeForEnergy();
+    long accountWindowSize = accountCapsule.getWindowSize(Common.ResourceCode.ENERGY);
+
+    if (now >= latestConsumeTime + accountWindowSize) {
+      return Pair.of(0L, 0L);
+    }
+
+    long restoreSlots = latestConsumeTime + accountWindowSize - now;
+
+    long newEnergyUsage = recover(energyUsage, latestConsumeTime, now, accountWindowSize);
+
+    long totalEnergyLimit = getDynamicPropertiesStore().getTotalEnergyCurrentLimit();
+    long totalEnergyWeight = getTotalEnergyWeight();
+
+    long balance = (long) ((double) newEnergyUsage * totalEnergyWeight / totalEnergyLimit * TRX_PRECISION);
+
+    return Pair.of(balance, restoreSlots * BLOCK_PRODUCED_INTERVAL / 1_000);
+  }
+
+  @Override
+  public Pair<Long, Long> getAccountNetUsageBalanceAndRestoreSeconds(AccountCapsule accountCapsule) {
+    long now = getHeadSlot();
+
+    long netUsage = accountCapsule.getNetUsage();
+    long latestConsumeTime = accountCapsule.getLatestConsumeTime();
+    long accountWindowSize = accountCapsule.getWindowSize(Common.ResourceCode.BANDWIDTH);
+
+    if (now >= latestConsumeTime + accountWindowSize) {
+      return Pair.of(0L, 0L);
+    }
+
+    long restoreSlots = latestConsumeTime + accountWindowSize - now;
+
+    long newNetUsage = recover(netUsage, latestConsumeTime, now, accountWindowSize);
+
+    long totalNetLimit = getDynamicPropertiesStore().getTotalNetLimit();
+    long totalNetWeight = getTotalNetWeight();
+
+    long balance = (long) ((double) newNetUsage * totalNetWeight / totalNetLimit * TRX_PRECISION);
+
+    return Pair.of(balance, restoreSlots * BLOCK_PRODUCED_INTERVAL / 1_000);
   }
 
   @Override
@@ -346,6 +400,28 @@ public class RepositoryStateImpl implements Repository {
     return bytesCapsule;
   }
 
+  @Override
+  public DelegatedResourceAccountIndexCapsule getDelegatedResourceAccountIndex(byte[] key) {
+    Key cacheKey = new Key(key);
+    if (delegatedResourceAccountIndexCache.containsKey(cacheKey)) {
+      return new DelegatedResourceAccountIndexCapsule(
+          delegatedResourceAccountIndexCache.get(cacheKey).getValue());
+    }
+
+    DelegatedResourceAccountIndexCapsule delegatedResourceAccountIndexCapsule;
+    if (parent != null) {
+      delegatedResourceAccountIndexCapsule = parent.getDelegatedResourceAccountIndex(key);
+    } else {
+      delegatedResourceAccountIndexCapsule = getDelegatedResourceAccountIndexStore().get(key);
+    }
+
+    if (delegatedResourceAccountIndexCapsule != null) {
+      delegatedResourceAccountIndexCache.put(
+          cacheKey, Value.create(delegatedResourceAccountIndexCapsule));
+    }
+    return delegatedResourceAccountIndexCapsule;
+  }
+
 
   @Override
   public void deleteContract(byte[] address) {
@@ -381,9 +457,35 @@ public class RepositoryStateImpl implements Repository {
   }
 
   @Override
+  public ContractStateCapsule getContractState(byte[] address) {
+    Key key = Key.create(address);
+    if (contractStateCache.containsKey(key)) {
+      return new ContractStateCapsule(contractStateCache.get(key).getValue());
+    }
+
+    ContractStateCapsule contractStateCapsule;
+    if (parent != null) {
+      contractStateCapsule = parent.getContractState(address);
+    } else {
+      contractStateCapsule = getContractStateStore().get(address);
+    }
+
+    if (contractStateCapsule != null) {
+      contractStateCache.put(key, Value.create(contractStateCapsule));
+    }
+    return contractStateCapsule;
+  }
+
+  @Override
   public void updateContract(byte[] address, ContractCapsule contractCapsule) {
     contractCache.put(Key.create(address),
         Value.create(contractCapsule, Type.DIRTY));
+  }
+
+  @Override
+  public void updateContractState(byte[] address, ContractStateCapsule contractStateCapsule) {
+    contractStateCache.put(Key.create(address),
+        Value.create(contractStateCapsule, Type.DIRTY));
   }
 
   @Override
@@ -434,6 +536,13 @@ public class RepositoryStateImpl implements Repository {
   public void updateDelegation(byte[] word, BytesCapsule bytesCapsule) {
     delegationCache.put(Key.create(word),
         Value.create(bytesCapsule.getData(), Type.DIRTY));
+  }
+
+  @Override
+  public void updateDelegatedResourceAccountIndex(
+      byte[] word, DelegatedResourceAccountIndexCapsule delegatedResourceAccountIndexCapsule) {
+    delegatedResourceAccountIndexCache.put(
+        Key.create(word), Value.create(delegatedResourceAccountIndexCapsule, Type.DIRTY));
   }
 
   @Override
@@ -592,6 +701,11 @@ public class RepositoryStateImpl implements Repository {
   }
 
   @Override
+  public void putContractState(Key key, Value value) {
+    contractStateCache.put(key, value);
+  }
+
+  @Override
   public void putStorage(Key key, Storage cache) {
     storageCache.put(key, cache);
   }
@@ -620,6 +734,11 @@ public class RepositoryStateImpl implements Repository {
   @Override
   public void putDelegation(Key key, Value value) {
     delegationCache.put(key, value);
+  }
+
+  @Override
+  public void putDelegatedResourceAccountIndex(Key key, Value value) {
+    delegatedResourceAccountIndexCache.put(key, value);
   }
 
   @Override
@@ -682,8 +801,9 @@ public class RepositoryStateImpl implements Repository {
     }
   }
 
-  private long increase(long lastUsage, long usage, long lastTime, long now) {
-    return increase(lastUsage, usage, lastTime, now, windowSize);
+  // new recover method, use personal window size.
+  private long recover(long lastUsage, long lastTime, long now, long personalWindowSize) {
+    return increase(lastUsage, 0, lastTime, now, personalWindowSize);
   }
 
   private long increase(long lastUsage, long usage, long lastTime, long now, long windowSize) {
@@ -729,6 +849,12 @@ public class RepositoryStateImpl implements Repository {
   public long getHeadSlot() {
     return (getWorldStateQueryInstance().getLatestBlockHeaderTimestamp()
         - Long.parseLong(CommonParameter.getInstance()
+        .getGenesisBlock().getTimestamp()))
+        / BLOCK_PRODUCED_INTERVAL;
+  }
+
+  public long getSlotByTimestampMs(long timestamp) {
+    return (timestamp - Long.parseLong(CommonParameter.getInstance()
         .getGenesisBlock().getTimestamp()))
         / BLOCK_PRODUCED_INTERVAL;
   }
@@ -872,6 +998,13 @@ public class RepositoryStateImpl implements Repository {
   }
 
   @Override
+  public void addTotalTronPowerWeight(long amount) {
+    long totalTronPowerWeight = getTotalTronPowerWeight();
+    totalTronPowerWeight += amount;
+    saveTotalTronPowerWeight(totalTronPowerWeight);
+  }
+
+  @Override
   public void saveTotalNetWeight(long totalNetWeight) {
     updateDynamicProperty(TOTAL_NET_WEIGHT,
         new BytesCapsule(ByteArray.fromLong(totalNetWeight)));
@@ -884,6 +1017,12 @@ public class RepositoryStateImpl implements Repository {
   }
 
   @Override
+  public void saveTotalTronPowerWeight(long totalTronPowerWeight) {
+    updateDynamicProperty(TOTAL_TRON_POWER_WEIGHT,
+        new BytesCapsule(ByteArray.fromLong(totalTronPowerWeight)));
+  }
+
+  @Override
   public long getTotalNetWeight() {
     return worldStateQueryInstance.getTotalNetWeight();
   }
@@ -891,6 +1030,11 @@ public class RepositoryStateImpl implements Repository {
   @Override
   public long getTotalEnergyWeight() {
     return worldStateQueryInstance.getTotalEnergyWeight();
+  }
+
+  @Override
+  public long getTotalTronPowerWeight() {
+    return worldStateQueryInstance.getDynamicPropertyLong(TOTAL_TRON_POWER_WEIGHT);
   }
 
 }
