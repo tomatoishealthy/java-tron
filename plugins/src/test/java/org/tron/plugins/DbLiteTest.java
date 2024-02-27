@@ -1,16 +1,24 @@
 package org.tron.plugins;
 
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Bytes;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.util.Strings;
 import org.junit.After;
-import org.junit.ClassRule;
+import org.junit.Assert;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.rocksdb.RocksDBException;
 import org.tron.api.WalletGrpc;
 import org.tron.common.application.Application;
 import org.tron.common.application.ApplicationFactory;
@@ -18,13 +26,24 @@ import org.tron.common.application.TronApplicationContext;
 import org.tron.common.config.DbBackupConfig;
 import org.tron.common.crypto.ECKey;
 import org.tron.common.utils.FileUtil;
+import org.tron.common.utils.Pair;
 import org.tron.common.utils.PublicMethod;
 import org.tron.common.utils.Utils;
 import org.tron.core.config.DefaultConfig;
 import org.tron.core.config.args.Args;
 import org.tron.core.services.RpcApiService;
 import org.tron.core.services.interfaceOnSolidity.RpcApiServiceOnSolidity;
+import org.tron.plugins.utils.FileUtils;
+import org.tron.plugins.utils.WrappedByteArray;
+import org.tron.plugins.utils.db.DBInterface;
+import org.tron.plugins.utils.db.DbTool;
 import picocli.CommandLine;
+
+import static org.tron.plugins.utils.DBUtils.CHECKPOINT_DB_V2;
+import static org.tron.plugins.utils.DBUtils.FILE_ENGINE;
+import static org.tron.plugins.utils.DBUtils.KEY_ENGINE;
+import static org.tron.plugins.utils.DBUtils.Operator;
+import static org.tron.plugins.utils.DBUtils.ROCKSDB;
 
 @Slf4j
 public class DbLiteTest {
@@ -34,6 +53,67 @@ public class DbLiteTest {
   private ManagedChannel channelFull;
   private Application appTest;
   private String databaseDir;
+
+  private static final String MOCK_DB_NAME = "account";
+  // checkpoint 1
+  private static final List<Pair<String, String>> entry1 = Lists.newArrayList(
+      new Pair<>("key1", "value1"),
+      new Pair<>("key2", "value2"),
+      new Pair<>("key3", "value3")
+  );
+  // checkpoint 2
+  private static final List<Pair<String, String>> entry2 = Lists.newArrayList(
+      new Pair<>("key0", "value0"),
+      new Pair<>("key2", "value222"),
+      new Pair<>("key3", "value33")
+  );
+  // checkpoint 3
+  private static final List<Pair<String, String>> entry3 = Lists.newArrayList(
+      new Pair<>("key2", "value22"),
+      new Pair<>("key3", "value3"),
+      new Pair<>("key4", "value4")
+  );
+  // checkpoint 4
+  private static final List<Pair<String, String>> entry4 = Lists.newArrayList(
+      new Pair<>("key7", "value7"),
+      new Pair<>("key111", "value111"),
+      new Pair<>("key3", "value333333"),
+      new Pair<>("key4", "value44"),
+      new Pair<>("key5", "value55")
+  );
+  // flat checkpoint
+  private static final List<Pair<String, String>> flatEntrys = Lists.newArrayList(
+      new Pair<>("key0", "value0"),
+      new Pair<>("key1", "value1"),
+      new Pair<>("key2", "value22"),
+      new Pair<>("key3", "value333333"),
+      new Pair<>("key4", "value44"),
+      new Pair<>("key5", "value55"),
+      new Pair<>("key7", "value7"),
+      new Pair<>("key111", "value111")
+  );
+  // account
+  private static final Map<WrappedByteArray, WrappedByteArray> accountEntrys =
+      new HashMap<WrappedByteArray, WrappedByteArray>() {
+    {
+      put(WrappedByteArray.of("key0".getBytes()),
+          WrappedByteArray.of("value0-a".getBytes()));
+      put(WrappedByteArray.of("key1".getBytes()),
+          WrappedByteArray.of("value1-a".getBytes()));
+      put(WrappedByteArray.of("key2".getBytes()),
+          WrappedByteArray.of("value22-a".getBytes()));
+      put(WrappedByteArray.of("key3-a".getBytes()),
+          WrappedByteArray.of("value333333-a".getBytes()));
+      put(WrappedByteArray.of("key4-a".getBytes()),
+          WrappedByteArray.of("value44-a".getBytes()));
+      put(WrappedByteArray.of("key5-a".getBytes()),
+          WrappedByteArray.of("value55-a".getBytes()));
+      put(WrappedByteArray.of("key7-a".getBytes()),
+          WrappedByteArray.of("value7-a".getBytes()));
+      put(WrappedByteArray.of("key111-a".getBytes()),
+          WrappedByteArray.of("value111-a".getBytes()));
+    }
+  };
 
   @Rule
   public final TemporaryFolder folder = new TemporaryFolder();
@@ -172,5 +252,100 @@ public class DbLiteTest {
         return;
       }
     }
+  }
+
+  private String mockDBWithCheckpointV2(String dbType)
+      throws IOException, RocksDBException {
+    String parentPath = folder.newFolder().toString();
+    String cpPath = Paths.get(parentPath, CHECKPOINT_DB_V2).toString();
+    FileUtils.createDirIfNotExists(cpPath);
+
+    List<List<Pair<String, String>>> allEntrys = Lists.newArrayList(
+        entry1, entry2, entry3, entry4);
+    long now = System.currentTimeMillis();
+    for (List<Pair<String, String>> entry: allEntrys) {
+      if ("rocksdb".equals(dbType)) {
+        String dbPath = Paths.get(cpPath, String.valueOf(now)).toString();
+        String propertyPath = Paths.get(dbPath, FILE_ENGINE).toString();
+        FileUtils.createDirIfNotExists(dbPath);
+        FileUtils.createFileIfNotExists(propertyPath);
+        FileUtils.writeProperty(propertyPath, KEY_ENGINE, ROCKSDB);
+      }
+      DBInterface dbInterface = DbTool.getDB(cpPath, String.valueOf(now));
+      entry.forEach((item) -> {
+        dbInterface.put(
+            Bytes.concat(DbLite.simpleEncode(MOCK_DB_NAME), item.getKey().getBytes()),
+            Bytes.concat(new byte[]{Operator.PUT.getValue()}, item.getValue().getBytes()));
+      });
+      now += 3000;
+    }
+    DBInterface dbInterface = DbTool.getDB(parentPath, MOCK_DB_NAME);
+    accountEntrys.forEach(
+        (key, value) -> dbInterface.put(key.getBytes(), value.getBytes()));
+    DbTool.close();
+    return parentPath;
+  }
+
+  private void testInitFlatCheckpointV2(String dbType) {
+    DbLite dbLite = new DbLite();
+    String path;
+    try {
+      path = mockDBWithCheckpointV2(dbType);
+      dbLite.initFlatCheckpointV2(path);
+    } catch (IOException | RocksDBException e) {
+      Assert.fail();
+    }
+    Assert.assertEquals(flatEntrys.size(), DbLite.checkpointV2FlatMap.size());
+    for (Pair<String, String> entry: flatEntrys) {
+      Assert.assertEquals(
+          Strings.fromByteArray(
+              Bytes.concat(new byte[]{Operator.PUT.getValue()},
+                  entry.getValue().getBytes())),
+          Strings.fromByteArray(
+              DbLite.checkpointV2FlatMap.get(
+                  WrappedByteArray.of(
+                      Bytes.concat(DbLite.simpleEncode(MOCK_DB_NAME),
+                          entry.getKey().getBytes())))));
+    }
+    DbTool.close();
+  }
+
+  @Test
+  public void testInitFlatCheckpointV2WithLevelDB() {
+    testInitFlatCheckpointV2("leveldb");
+  }
+
+  @Test
+  public void testInitFlatCheckpointV2WithRocksDB() {
+    testInitFlatCheckpointV2("rocksdb");
+  }
+
+  @Test
+  public void testGetDataFromSourceDB() {
+    WrappedByteArray key0 = WrappedByteArray.of("key0".getBytes());
+    WrappedByteArray key5 = WrappedByteArray.of("key5".getBytes());
+    WrappedByteArray key5a = WrappedByteArray.of("key5-a".getBytes());
+
+    DbLite dbLite = new DbLite();
+    String path;
+    try {
+      path = mockDBWithCheckpointV2("leveldb");
+      dbLite.initFlatCheckpointV2(path);
+      // data exists in database and checkpoint
+      Assert.assertEquals(WrappedByteArray.of("value0".getBytes()),
+          WrappedByteArray.of(
+              dbLite.getDataFromSourceDB(path, MOCK_DB_NAME, key0.getBytes())));
+      // data only exists in checkpoint
+      Assert.assertEquals(WrappedByteArray.of("value55".getBytes()),
+          WrappedByteArray.of(
+              dbLite.getDataFromSourceDB(path, MOCK_DB_NAME, key5.getBytes())));
+      // data only exists in database
+      Assert.assertEquals(WrappedByteArray.of("value55-a".getBytes()),
+          WrappedByteArray.of(
+              dbLite.getDataFromSourceDB(path, MOCK_DB_NAME, key5a.getBytes())));
+    } catch (IOException | RocksDBException e) {
+      Assert.fail();
+    }
+    DbTool.close();
   }
 }
