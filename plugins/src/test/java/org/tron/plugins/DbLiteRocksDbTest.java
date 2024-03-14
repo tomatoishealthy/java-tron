@@ -9,4 +9,9 @@ public class DbLiteRocksDbTest extends DbLiteTest {
   public void testToolsWithRocksDB() throws InterruptedException, IOException {
     testTools("ROCKSDB", 1);
   }
+
+  @Test
+  public void testInitFlatCheckpointV2WithRocksDB() {
+    testInitFlatCheckpointV2("ROCKSDB");
+  }
 }

@@ -9,4 +9,9 @@ public class DbLiteLevelDbV2Test extends DbLiteTest {
   public void testToolsWithLevelDBV2() throws InterruptedException, IOException {
     testTools("LEVELDB", 2);
   }
+
+  @Test
+  public void testInitFlatCheckpointV2WithLevelDB() {
+    testInitFlatCheckpointV2("LEVELDB");
+  }
 }
